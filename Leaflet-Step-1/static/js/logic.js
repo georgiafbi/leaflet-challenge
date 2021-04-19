@@ -107,7 +107,7 @@ function createMarkers(data) {
         var type = quake.properties.type;
         var depth = quake.geometry.coordinates[2];
         var id = quake.id;
-        var circleColor = colorSelect(mag);
+        var circleColor = colorSelect(depth);
         quakeMarkers.push(L.circle([lat, long], {
             color: "white",
             fillColor: circleColor,
@@ -129,19 +129,19 @@ function createMarkers(data) {
 
 function colorSelect(num) {
     var colors = ["LawnGreen", "Blue","Yellow", "Fuchsia", "Orange", "DarkRed"]
-    if (num <=1){
+    if (num <=10){
         index=0;
     }
-    else if (num<=3){
+    else if (num<=30){
         index=1;
     }
-    else if( num <=5){
+    else if( num <=50){
         index=2;
     }
-    else if( num <=7){
+    else if( num <=70){
         index=3;
     }
-    else if (num <=9){
+    else if (num <=90){
         index=4;
     }
     else {
