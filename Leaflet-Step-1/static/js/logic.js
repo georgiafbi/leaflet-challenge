@@ -49,7 +49,7 @@ function createMap(earthquakes) {
     var i = 0;
     colors.forEach((color) =>{
         
-      legendInfo += `<li style="list-style:square;color:${color};font-size:20px;background-color:white;"><h5 style="text-align:center;color:black">${depths[i]}</h5></li>`;
+      legendInfo += `<li style="list-style:square;color:${color};font-size:20px;background-color:white;"><h5 style="text-align:center;color:black">${depths[i]} km</h5></li>`;
       i++;
     });
     legendInfo += "</ul>";
@@ -141,7 +141,7 @@ function createMarkers(data) {
           <hr>
           <h2>Time: ${eventTime}</h2>
           <h2>Place: ${place}</h2>
-          <h2>Depth: ${depth}</h3>`))
+          <h2>Depth: ${depth} km</h3>`))
 
     });
     console.log(quakeMarkers);
