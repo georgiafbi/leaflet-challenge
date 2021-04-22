@@ -1,4 +1,5 @@
 const sevenDayUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+const oneHourUrl="https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
 const mapCenter = [44.4280, -110.5885]; //yellowstone national park
 const zoomLevel = 4.5;
 const maxZoomLevel = 18;
@@ -35,6 +36,27 @@ function createMap(earthquakes) {
         collapsed: false
     }).addTo(myMap);
     console.log(negativeMag);
+
+
+    var legend = L.control({ position: "bottomleft" });
+  legend.onAdd = function () {
+    var depths=['-10-10','10-30','30-50',"50-70","70-90","90+"]
+    var div = L.DomUtil.create("div", "info legend");
+    var colors = colorSelect("ALL");
+    // // Add min & max
+    var legendInfo = `<h3 style="color:white;">Earthquake Depth: </h3>`;
+    legendInfo += '<ul style="background-color:white">';
+    var i = 0;
+    colors.forEach((color) =>{
+        
+      legendInfo += `<li style="list-style:square;color:${color};font-size:20px;background-color:white;"><h5 style="text-align:center;color:black">${depths[i]}</h5></li>`;
+      i++;
+    });
+    legendInfo += "</ul>";
+    div.innerHTML = legendInfo;
+    return div;
+  };
+  legend.addTo(myMap);
 }
 
 
@@ -128,7 +150,10 @@ function createMarkers(data) {
 }
 
 function colorSelect(num) {
-    var colors = ["LawnGreen", "Blue","Yellow", "Fuchsia", "Orange", "DarkRed"]
+    var colors = ["LawnGreen", "Blue","Yellow", "Fuchsia", "Orange", "DarkRed"];
+    if (num ==="ALL"){
+        return colors;
+    }
     if (num <=10){
         index=0;
     }
