@@ -5,33 +5,63 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Leaflet Step-1</title>
+  <title>Earthquake Monitor</title>
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css"
-    integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
-    crossorigin="" />
+  <!-- MapLibre GL CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
 
   <!-- Our CSS -->
-  <link rel="stylesheet" type="text/css" href="Leaflet-Step-1\static\css\style.css">
+  <link rel="stylesheet" type="text/css" href="Leaflet-Step-1/static/css/style.css">
 </head>
 
 <body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Global seismic activity</p>
+        <h1>Earthquake Monitor</h1>
+      </div>
+      <div class="header-actions">
+        <div class="date-range" aria-label="Earthquake date range">
+          <label class="range-label" for="range-slider">Range</label>
+          <input id="range-slider" class="range-slider" type="range" min="0" max="34" step="1" value="4" aria-label="Select earthquake range" />
+        </div>
+        <div class="status-pill">Live feed · 7 days</div>
+      </div>
+    </header>
 
-  <!-- The div that holds our map -->
-  <div id="map-id"></div>
-  <!-- D3 -->
-  <script src="https://d3js.org/d3.v5.min.js"></script>
+    <section class="stats-panel" aria-label="Earthquake summary">
+      <div class="stat-card">
+        <span class="stat-label">Earthquakes</span>
+        <strong id="total-events">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Strongest</span>
+        <strong id="strongest-magnitude">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Deepest</span>
+        <strong id="deepest-depth">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Latest</span>
+        <strong id="latest-event">--</strong>
+      </div>
+    </section>
 
-  <!-- Leaflet JavaScript -->
-  <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"
-    integrity="sha512-tAGcCfR4Sc5ZP5ZoVz0quoZDYX5aCtEm/eu1KhSLj2c9eFrylXZknQYmxUssFaVJKvvc0dJQixhGjG2yXWiV9Q=="
-    crossorigin=""></script>
+    <!-- The div that holds our map -->
+    <div id="map-wrap">
+      <div id="map-id"></div>
+    </div>
+  </div>
+
+  <!-- MapLibre GL JavaScript -->
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 
   <!-- API Key -->
-  <script type="text/javascript" src="Leaflet-Step-1\static\js\config.js"></script>
+  <script type="text/javascript" src="Leaflet-Step-1/static/js/config.js"></script>
   <!-- Our JavaScript -->
-  <script type="text/javascript" src="Leaflet-Step-1\static\js\logic.js"></script>
+  <script type="text/javascript" src="Leaflet-Step-1/static/js/logic.js"></script>
 </body>
 
 </html>
