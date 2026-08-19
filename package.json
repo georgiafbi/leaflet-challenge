@@ -1,0 +1,10 @@
+{
+  "name": "leaflet-challenge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "USGS earthquake visualization with Leaflet",
+  "scripts": {
+    "check:syntax": "node --check Leaflet-Step-1/static/js/config.js && node --check Leaflet-Step-1/static/js/logic.js",
+    "check": "npm run check:syntax"
+  }
+}

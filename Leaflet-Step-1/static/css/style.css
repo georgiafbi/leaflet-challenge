@@ -5,23 +5,118 @@ body,
   padding: 0;
   margin: 0;
 }
-h3{
+
+#map-id {
+  position: relative;
+}
+
+h3 {
   text-align: center;
 }
 
-h1{
-  text-align:center;
-}
-h2{
-  text-align: center;
-}
-h3{
-  text-align: center;
-}
-ul {
-  border: 1px solid #666;
+.status-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  min-width: 260px;
+  max-width: 70vw;
+  padding: 8px 12px;
   border-radius: 8px;
-  box-shadow: 0 0 10px #666;
-  padding-top: 10px;
-  background-color: white;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background: #f4f7fb;
+  color: #1f2d3d;
+}
+
+.status-loading {
+  background: #eef6ff;
+  color: #22577a;
+}
+
+.status-success {
+  background: #edfcef;
+  color: #1d6f42;
+}
+
+.status-warning {
+  background: #fff8e7;
+  color: #7a4f01;
+}
+
+.status-error {
+  background: #fff0f0;
+  color: #9d1c1c;
+}
+
+.legend {
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-family: Arial, sans-serif;
+}
+
+.legend h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  border-radius: 3px;
+}
+
+.filter-control {
+  width: 220px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-family: Arial, sans-serif;
+}
+
+.filter-control h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.filter-control label {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 12px;
+}
+
+.filter-control select,
+.filter-control input,
+.filter-control button {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-control button {
+  margin-top: 10px;
+  border: 1px solid #9aa8b7;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  background: #f4f7fb;
 }
