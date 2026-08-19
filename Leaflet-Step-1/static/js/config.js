@@ -1,2 +1,3 @@
-// API key
-const API_KEY = "pk.eyJ1IjoiZ2VvcmdpYWZiaSIsImEiOiJja25na20zcmwwN2l2MnFwa3BrZ2JmaHdxIn0.5aZk4GmJsmPQMAgpdia8lQ";
+// Optional Mapbox token for additional base layers.
+// Set window.MAPBOX_API_KEY before this script or replace the empty string locally.
+const API_KEY = window.MAPBOX_API_KEY || "";
