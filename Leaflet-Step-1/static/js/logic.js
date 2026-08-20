@@ -75,6 +75,7 @@ let highlightQuakes = { strongest: null, deepest: null, latest: null };
 let selectedQuakeId = null;
 let lastEasterEggZoom = 1.6;
 let easterEggToastTimer = null;
+let activeQuakePopup = null;
 const shownZoomEasterEggs = new Set();
 const eventDetailCache = new Map();
 
@@ -541,12 +542,30 @@ function buildPopupContent(props) {
     return content;
 }
 
+function setActiveQuakePopup(popup) {
+    if (activeQuakePopup && activeQuakePopup !== popup) {
+        activeQuakePopup.remove();
+    }
+
+    activeQuakePopup = popup || null;
+    if (activeQuakePopup && typeof activeQuakePopup.on === "function") {
+        activeQuakePopup.on("close", function () {
+            if (activeQuakePopup === popup) {
+                activeQuakePopup = null;
+            }
+        });
+    }
+    return activeQuakePopup;
+}
+
 function openQuakePopup(coordinates, properties) {
     var popupProperties = Object.assign({}, properties, properties.detail ? { enrichmentState: "loading" } : {});
     var popup = new maplibregl.Popup({ maxWidth: "340px", offset: 10 })
         .setLngLat(coordinates)
-        .setDOMContent(buildPopupContent(popupProperties))
-        .addTo(globeMap);
+        .setDOMContent(buildPopupContent(popupProperties));
+
+    setActiveQuakePopup(popup);
+    popup.addTo(globeMap);
 
     if (properties.detail) {
         getEventDetail(properties.detail).then(function (metadata) {
@@ -626,6 +645,7 @@ function resetGlobeView() {
         return;
     }
 
+    setActiveQuakePopup(null);
     setAutoRotate(false);
     globeMap.flyTo({ center: [-40, 25], zoom: 1.6, duration: 1800, essential: false });
 }
@@ -1869,6 +1889,7 @@ window.earthquakeApp.test = {
     getRangePresetByKey: getRangePresetByKey,
     getZoomEasterEgg: getZoomEasterEgg,
     markRegionalChampions: markRegionalChampions,
+    setActiveQuakePopup: setActiveQuakePopup,
     setMapPanelExpanded: setMapPanelExpanded,
     updateSummary: updateSummary
 };

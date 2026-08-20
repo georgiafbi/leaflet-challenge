@@ -87,6 +87,39 @@
         assertEqual(content.hidden, true, "collapsed content visibility");
     });
 
+    test("keeps only one earthquake popup active", function () {
+        function createPopupDouble() {
+            return {
+                removeCount: 0,
+                closeHandler: null,
+                remove: function () {
+                    this.removeCount += 1;
+                    if (this.closeHandler) this.closeHandler();
+                },
+                on: function (eventName, handler) {
+                    if (eventName === "close") this.closeHandler = handler;
+                }
+            };
+        }
+
+        var first = createPopupDouble();
+        var second = createPopupDouble();
+        helpers.setActiveQuakePopup(first);
+        helpers.setActiveQuakePopup(second);
+        assertEqual(first.removeCount, 1, "opening another popup should remove the previous popup");
+        assertEqual(second.removeCount, 0, "the new popup should remain open");
+
+        first.closeHandler();
+        helpers.setActiveQuakePopup(null);
+        assertEqual(second.removeCount, 1, "a stale close event must not clear the newer popup");
+
+        var manuallyClosed = createPopupDouble();
+        helpers.setActiveQuakePopup(manuallyClosed);
+        manuallyClosed.closeHandler();
+        helpers.setActiveQuakePopup(null);
+        assertEqual(manuallyClosed.removeCount, 0, "a manually closed popup should not be removed twice");
+    });
+
     test("builds paginated USGS URLs", function () {
         var start = new Date("2026-01-01T00:00:00.000Z");
         var end = new Date("2026-01-02T00:00:00.000Z");
