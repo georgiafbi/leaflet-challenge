@@ -201,6 +201,15 @@ function formatTime(timestamp) {
   return new Date(timestamp).toLocaleString();
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function normalizeEarthquake(feature) {
   if (!feature || !feature.geometry || !Array.isArray(feature.geometry.coordinates)) return null;
   const coords = feature.geometry.coordinates;
@@ -237,6 +246,9 @@ function normalizeEarthquake(feature) {
 
 function createMarker(earthquake) {
   const color = getDepthColor(earthquake.depth);
+  const safePlace = escapeHtml(earthquake.place);
+  const safeId = escapeHtml(earthquake.id);
+  const safeType = escapeHtml(earthquake.type);
   return L.circle([earthquake.latitude, earthquake.longitude], {
     color: "#ffffff",
     weight: 1,
@@ -244,9 +256,9 @@ function createMarker(earthquake) {
     fillOpacity: 0.75,
     radius: getMarkerRadius(earthquake.magnitude)
   }).bindPopup(`
-    <h3>${earthquake.place}</h3>
-    <p><strong>ID:</strong> ${earthquake.id}</p>
-    <p><strong>Type:</strong> ${earthquake.type}</p>
+    <h3>${safePlace}</h3>
+    <p><strong>ID:</strong> ${safeId}</p>
+    <p><strong>Type:</strong> ${safeType}</p>
     <p><strong>Magnitude:</strong> ${earthquake.magnitude.toFixed(1)}</p>
     <p><strong>Depth:</strong> ${earthquake.depth.toFixed(1)} km</p>
     <p><strong>Time:</strong> ${formatTime(earthquake.time)}</p>
