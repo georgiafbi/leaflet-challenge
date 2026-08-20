@@ -30,6 +30,7 @@ const appState = {
   quakeLayer: null,
   layerControl: null,
   legendControl: null,
+  activePopup: null,
   allEarthquakes: [],
   selectedFeed: "week",
   minMagnitude: 0,
@@ -94,7 +95,21 @@ function initializeMap() {
   appState.map = L.map("map-id", {
     center: MAP_CENTER,
     zoom: DEFAULT_ZOOM,
+    closePopupOnClick: true,
     layers: [defaultLayer, appState.quakeLayer]
+  });
+
+  appState.map.on("popupopen", function (event) {
+    if (appState.activePopup && appState.activePopup !== event.popup) {
+      appState.map.closePopup(appState.activePopup);
+    }
+    appState.activePopup = event.popup;
+  });
+
+  appState.map.on("popupclose", function (event) {
+    if (appState.activePopup === event.popup) {
+      appState.activePopup = null;
+    }
   });
 
   appState.layerControl = L.control.layers(baseLayers, { Earthquakes: appState.quakeLayer }, { collapsed: false }).addTo(appState.map);
