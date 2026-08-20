@@ -1,87 +1,99 @@
-# Leaflet Homework - Visualizing Data with Leaflet
+# Earthquake Monitor
 
-## Background
+An interactive MapLibre GL globe that visualizes recent earthquake activity from the USGS Earthquake Catalog.
 
-![1-Logo](Images/1-Logo.png)
+## Features
 
-Welcome to the United States Geological Survey, or USGS for short! The USGS is responsible for providing scientific data about natural hazards, the health of our ecosystems and environment; and the impacts of climate and land-use change. Their scientists develop new methods and tools to supply timely, relevant, and useful information about the Earth and its processes. As a new hire, you will be helping them out with an exciting new project!
+- Quick time-range presets for 1 hour, 24 hours, 7 days, and 30 days, plus all intermediate ranges
+- Paginated USGS requests, including ranges with more than 20,000 events
+- One-decimal magnitude labels embedded in 3D sphere markers at a glance; marker size increases with magnitude and color continues to represent depth
+- Low-zoom clustering that reduces overlap and expands into individual events when selected
+- Summary cards for total, strongest, deepest, and latest events
+- Clickable summary cards that navigate to notable earthquakes
+- Light, dark, and street basemaps
+- Toggleable earthquake and depth layers with a one-click filter reset
+- Phone-first layout with compact 2×2 stats, collapsible Layers control, and a safe-area-aware legend sheet
+- Collapsible map legend and persistent selected-event highlighting
+- Country or offshore-area labels in earthquake details
+- Lazy USGS popup enrichment with named faults, tectonic plates, and concise tectonic context when authoritative detail metadata is available
+- Broad geographic-group champions marked with radial, spiky 3D stars wrapped around glossy spherical cores
+- Keyboard-accessible controls and reduced-motion support
+- Responsive layouts for desktop and mobile screens
 
-The USGS is interested in building a new set of tools that will allow them visualize their earthquake data. They collect a massive amount of data from all over the world each day, but they lack a meaningful way of displaying it. Their hope is that being able to visualize their data will allow them to better educate the public and other government organizations (and hopefully secure more funding..) on issues facing our planet.
+## Technology
 
-### Before You Begin
+- HTML, CSS, and browser-native JavaScript
+- [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/)
+- [Rapid Editor Country Coder](https://github.com/rapideditor/country-coder) for local point-in-polygon country lookup
+- [USGS Earthquake Catalog API](https://earthquake.usgs.gov/fdsnws/event/1/)
+- Mapbox raster styles
 
-1. Create a new repository for this project called `leaflet-challenge`. **Do not add this homework to an existing repository**.
+No build step or package installation is required.
 
-2. Clone the new repository to your computer.
+## Run locally
 
-3. Inside your local git repository, create a directory for the Leaflet challenge. Use the folder names to correspond to the challenges: **Leaflet-Step-1** and **Leaflet-Step-2**.
+Serve the repository root with any static web server and open `index.html`. VS Code's Live Server extension is one convenient option. Opening `index.html` directly also works for most features, but browser geolocation requires a secure HTTP origin such as `localhost` or HTTPS.
 
-4. This homeworks utilizes both **html** and **Javascript** so be sure to add all the necessary files. These will be the main files to run for analysis.
+## Mapbox token
 
-5. Push the above changes to GitHub or GitLab.
+The basemaps use the public Mapbox access token in `static/js/config.js`. Mapbox public tokens are expected to be visible in browser applications; they are identifiers, not server-side secrets.
 
-## Your Task
+For your own deployment:
 
-### Level 1: Basic Visualization
+1. Create a public token in the Mapbox account dashboard.
+2. Replace `API_KEY` in `static/js/config.js`.
+3. Add allowed-URL restrictions for the production domain to prevent unauthorized quota usage.
+4. Grant only the scopes required to read styles and tiles.
 
-![2-BasicMap](Images/2-BasicMap.png)
+Never place a secret Mapbox token in client-side JavaScript.
 
-Your first task is to visualize an earthquake data set.
+## Data behavior
 
-1. **Get your data set**
+The app queries a fixed start and end time for each selected range. Requests use the USGS maximum page size of 20,000 and continue with offsets until the final page is received. Selecting another range aborts the previous request.
 
-   ![3-Data](Images/3-Data.png)
+Geographic classification uses a hybrid model. Land coordinates are matched locally to a country with the pinned `@rapideditor/country-coder` browser bundle; no per-event geocoding requests are made. Coordinates without a land match receive a named ocean or sea fallback such as **North Pacific Ocean** or **Caribbean Sea**. If the optional lookup bundle cannot load, the app remains usable and falls back to a broad regional label.
 
-   The USGS provides earthquake data in a number of different formats, updated every 5 minutes. Visit the [USGS GeoJSON Feed](http://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) page and pick a data set to visualize. When you click on a data set, for example 'All Earthquakes from the Past 7 Days', you will be given a JSON representation of that data. You will be using the URL of this JSON to pull in the data for our visualization.
+Country Coder uses generalized polygons intended for fast client-side lookup. Labels near disputed borders, coastlines, and small islands should therefore be treated as informative rather than authoritative. Champion stars intentionally use a separate set of six broad geographic groups, preventing country-level classification from filling the globe with stars.
 
-   ![4-JSON](Images/4-JSON.png)
+Scientific popup context is loaded only when an individual earthquake popup opens, keeping the main feed fast. The event's USGS GeoJSON detail record is fetched once and cached for later selections. Named faults, plate names, and excerpts are derived only from an inline USGS **Tectonic Summary** product; the app omits these rows when that product is unavailable rather than inferring them from location. Most small or recent events do not include a tectonic summary.
 
-2. **Import & Visualize the Data**
+## Accessibility
 
-   Create a map using Leaflet that plots all of the earthquakes from your data set based on their longitude and latitude.
+- The globe does not auto-rotate when the operating system requests reduced motion.
+- The map includes a pause/resume rotation control.
+- Summary cards and legend filters are keyboard operable.
+- Time-range presets, the complete range selector, and the collapsible legend are keyboard operable.
+- Mobile Layers and legend controls expose synchronized expanded/collapsed states to assistive technology.
+- Feed state changes are announced through a polite live region.
 
-   * Your data markers should reflect the magnitude of the earthquake by their size and and depth of the earth quake by color. Earthquakes with higher magnitudes should appear larger and earthquakes with greater depth should appear darker in color.
+## Tests
 
-   * **HINT** the depth of the earth can be found as the third coordinate for each earthquake.
+Open `tests/logic-tests.html` in a browser. The dependency-free test page validates:
 
-   * Include popups that provide additional information about the earthquake when a marker is clicked.
+- Depth range boundaries
+- Sphere markers across all magnitude values, with champion-star emphasis
+- Embedded marker-magnitude formatting
+- Time-range preset fallback
+- Stable earthquake identity used by selected-marker highlighting
+- Collapsible mobile map-panel state
+- Paginated USGS query parameters
+- Safe popup handling of untrusted strings
+- USGS tectonic-summary parsing and optional scientific popup details
+- Representative broad champion-group classification
+- Country lookup and offshore-area fallback
+- One champion per broad geographic group
+- Summary calculations
 
-   * Create a legend that will provide context for your map data.
+The page title starts with `PASS` when all tests succeed and `FAILED` when any test fails.
 
-   * Your visualization should look something like the map above.
+## Project structure
 
-- - -
+- `../index.html` — application entry point
+- `static/css/style.css` — responsive application styling
+- `static/js/config.js` — public Mapbox token configuration
+- `static/js/logic.js` — map, data, controls, and presentation logic
+- `tests/` — browser-native regression tests
 
-### Level 2: More Data (Optional)
+## Data attribution
 
-![5-Advanced](Images/5-Advanced.png)
-
-The USGS wants you to plot a second data set on your map to illustrate the relationship between tectonic plates and seismic activity. You will need to pull in a second data set and visualize it along side your original set of data. Data on tectonic plates can be found at <https://github.com/fraxen/tectonicplates>.
-
-In this step we are going to..
-
-* Plot a second data set on our map.
-
-* Add a number of base maps to choose from as well as separate out our two different data sets into overlays that can be turned on and off independently.
-
-* Add layer controls to our map.
-
-- - -
-
-### Assessment
-
-Your final product will be assessed on the following metrics:
-
-* Completion of assigned tasks
-
-* Visual appearance
-
-* Professionalism
-
-* Ensure your repository has regular commits (i.e. 20+ commits) and a thorough README.md file
-
-**Good luck!**
-
-### Copyright
-
-© 2021 Trilogy Education Services, LLC, a 2U, Inc. brand. Confidential and Proprietary. All Rights Reserved.
+Earthquake data is provided by the U.S. Geological Survey. Map data is attributed to OpenStreetMap contributors, with imagery provided by Mapbox.

@@ -23,10 +23,17 @@
       </div>
       <div class="header-actions">
         <div class="date-range" aria-label="Earthquake date range">
-          <label class="range-label" for="range-slider">Range</label>
-          <input id="range-slider" class="range-slider" type="range" min="0" max="34" step="1" value="4" aria-label="Select earthquake range" />
+          <span class="range-label" id="range-label">Range</span>
+          <div class="range-presets" role="group" aria-labelledby="range-label">
+            <button class="range-preset" type="button" data-range="1h">1h</button>
+            <button class="range-preset is-active" type="button" data-range="24h" aria-pressed="true">24h</button>
+            <button class="range-preset" type="button" data-range="7d">7d</button>
+            <button class="range-preset" type="button" data-range="30d">30d</button>
+          </div>
+          <label class="visually-hidden" for="range-select">More time ranges</label>
+          <select id="range-select" class="range-select" aria-label="More earthquake time ranges"></select>
         </div>
-        <div class="status-pill">Live feed · 7 days</div>
+        <div class="status-pill" role="status" aria-live="polite">Loading · 24 hours</div>
       </div>
     </header>
 
@@ -60,6 +67,8 @@
 
   <!-- API Key -->
   <script type="text/javascript" src="Leaflet-Step-1/static/js/config.js"></script>
+  <!-- Local country lookup (pinned version; classification has a built-in fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/@rapideditor/country-coder@5.6.1/dist/country-coder.iife.min.js"></script>
   <!-- Our JavaScript -->
   <script type="text/javascript" src="Leaflet-Step-1/static/js/logic.js"></script>
 </body>

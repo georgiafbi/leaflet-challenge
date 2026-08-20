@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earthquake Monitor Tests</title>
+  <style>
+    body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; font-family: "Segoe UI", sans-serif; color: #0f172a; }
+    li { margin: 0.5rem 0; }
+    .pass { color: #166534; }
+    .fail { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>Earthquake Monitor Tests</h1>
+  <p id="summary" role="status">Running…</p>
+  <ul id="results"></ul>
+
+  <div hidden aria-hidden="true">
+    <span id="total-events"></span>
+    <span id="strongest-magnitude"></span>
+    <span id="deepest-depth"></span>
+    <span id="latest-event"></span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@rapideditor/country-coder@5.6.1/dist/country-coder.iife.min.js"></script>
+  <script src="../static/js/logic.js"></script>
+  <script src="logic-tests.js"></script>
+</body>
+</html>
