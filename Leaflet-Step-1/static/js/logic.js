@@ -100,10 +100,11 @@ function initializeMap() {
   });
 
   appState.map.on("popupopen", function (event) {
-    if (appState.activePopup && appState.activePopup !== event.popup) {
-      appState.map.closePopup(appState.activePopup);
-    }
+    const previousPopup = appState.activePopup;
     appState.activePopup = event.popup;
+    if (previousPopup && previousPopup !== event.popup) {
+      previousPopup.remove();
+    }
   });
 
   appState.map.on("popupclose", function (event) {
@@ -249,6 +250,7 @@ function createMarker(earthquake) {
   const safePlace = escapeHtml(earthquake.place);
   const safeId = escapeHtml(earthquake.id);
   const safeType = escapeHtml(earthquake.type);
+  const safeTime = escapeHtml(formatTime(earthquake.time));
   return L.circle([earthquake.latitude, earthquake.longitude], {
     color: "#ffffff",
     weight: 1,
@@ -261,7 +263,7 @@ function createMarker(earthquake) {
     <p><strong>Type:</strong> ${safeType}</p>
     <p><strong>Magnitude:</strong> ${earthquake.magnitude.toFixed(1)}</p>
     <p><strong>Depth:</strong> ${earthquake.depth.toFixed(1)} km</p>
-    <p><strong>Time:</strong> ${formatTime(earthquake.time)}</p>
+    <p><strong>Time:</strong> ${safeTime}</p>
   `);
 }
 
