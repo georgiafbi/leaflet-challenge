@@ -1818,36 +1818,37 @@ function buildMapPanels() {
 
     var magnitudeLegend = document.createElement("div");
     magnitudeLegend.className = "magnitude-legend";
-    magnitudeLegend.innerHTML = '<p class="legend-subtitle">Magnitude · label &amp; size</p><div class="magnitude-scale"><span class="magnitude-item"><i class="magnitude-shape is-sphere"></i><span class="legend-desktop-copy">Sphere marker<br><small>Number = magnitude</small></span><span class="legend-mobile-copy">Magnitude</span></span></div>';
+    magnitudeLegend.title = "Sphere marker size represents earthquake magnitude; number indicates exact magnitude.";
+    magnitudeLegend.innerHTML = '<span class="magnitude-shape is-sphere" aria-hidden="true"></span><span class="legend-badge-text">Mag Size</span>';
     extraNotes.appendChild(magnitudeLegend);
 
-    var platesNote = document.createElement("p");
+    var platesNote = document.createElement("div");
     platesNote.className = "legend-note";
-    platesNote.innerHTML = '<span style="display:inline-block;width:18px;height:3px;background:#fbbf24;box-shadow:0 0 6px #f59e0b;border-radius:2px;margin-right:6px;" aria-hidden="true"></span><span class="legend-desktop-copy">Tectonic plate boundaries (PB2002)</span><span class="legend-mobile-copy">Plates</span>';
+    platesNote.title = "Tectonic plate boundaries from the Peter Bird (PB2002) global model.";
+    platesNote.innerHTML = '<span class="plate-swatch" aria-hidden="true"></span><span class="legend-badge-text">Plates</span>';
     extraNotes.appendChild(platesNote);
 
-    var championNote = document.createElement("p");
+    var championNote = document.createElement("div");
     championNote.className = "legend-note";
+    championNote.title = "Regional Max: the single strongest earthquake across each broad world region.";
     championNote.appendChild(createChampionEpicenterBadge(depthRangeDefinitions[1].color));
-    var championDesktopCopy = document.createElement("span");
-    championDesktopCopy.className = "legend-desktop-copy";
-    championDesktopCopy.textContent = "Strongest quake per broad geographic group";
-    var championMobileCopy = document.createElement("span");
-    championMobileCopy.className = "legend-mobile-copy";
-    championMobileCopy.textContent = "Champion";
-    championNote.appendChild(championDesktopCopy);
-    championNote.appendChild(championMobileCopy);
+    var champText = document.createElement("span");
+    champText.className = "legend-badge-text";
+    champText.textContent = "Regional Max";
+    championNote.appendChild(champText);
     extraNotes.appendChild(championNote);
 
-    var clusterNote = document.createElement("p");
+    var clusterNote = document.createElement("div");
     clusterNote.className = "legend-note";
-    clusterNote.innerHTML = '<span class="cluster-legend-icon" aria-hidden="true">12</span><span class="legend-desktop-copy">Numbered circles group nearby events; select one to zoom in</span><span class="legend-mobile-copy">Clusters</span>';
+    clusterNote.title = "Numbered circles group nearby events together; select to zoom in.";
+    clusterNote.innerHTML = '<span class="cluster-legend-icon" aria-hidden="true">12</span><span class="legend-badge-text">Clusters</span>';
     extraNotes.appendChild(clusterNote);
 
     var resetButton = document.createElement("button");
     resetButton.type = "button";
     resetButton.className = "legend-reset";
-    resetButton.innerHTML = '<span class="legend-reset-icon" aria-hidden="true">↺</span><span class="legend-desktop-copy">Reset map filters</span><span class="legend-mobile-copy">Reset</span>';
+    resetButton.title = "Reset all map filters to default";
+    resetButton.innerHTML = '<span class="legend-reset-icon" aria-hidden="true">↺</span><span class="legend-badge-text">Reset</span>';
     resetButton.addEventListener("click", resetMapFilters);
     extraNotes.appendChild(resetButton);
 

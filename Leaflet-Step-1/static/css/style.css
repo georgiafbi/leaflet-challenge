@@ -390,13 +390,18 @@ body {
   width: 100%;
   max-width: none;
   margin: 10px auto 0;
-  padding: 7px 10px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(2, 6, 23, 0.4);
+  box-sizing: border-box;
 }
 
 .legend-panel.is-expanded {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 12px;
 }
 
 .legend-panel:not(.is-expanded) {
@@ -408,7 +413,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   border: 0;
   background: transparent;
   color: #f8fafc;
@@ -445,55 +450,60 @@ body {
   min-width: 0;
   margin-top: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
+  justify-content: space-between;
+  gap: 6px 12px;
+  flex: 1 1 auto;
+  overflow: visible;
 }
 
 .legend-content[hidden] {
-  display: none;
+  display: none !important;
 }
 
 .legend-list {
   display: flex;
+  align-items: center;
   gap: 4px;
-  flex: 0 0 auto;
+  flex-wrap: wrap;
 }
 
 .legend-extra {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .legend-toggle {
   width: auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.38);
+  background: rgba(15, 23, 42, 0.4);
   color: #e2e8f0;
-  font-size: 0.7rem;
-  padding: 4px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 8px;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
 }
 
 .legend-toggle:hover,
 .legend-toggle:focus-visible {
   border-color: rgba(125, 211, 252, 0.8);
+  background: rgba(15, 23, 42, 0.7);
   outline: none;
 }
 
 .legend-toggle.is-off {
-  opacity: 0.6;
+  opacity: 0.5;
   background: rgba(15, 23, 42, 0.2);
+  border-color: rgba(148, 163, 184, 0.15);
 }
 
 .legend-label {
@@ -506,109 +516,86 @@ body {
 }
 
 .legend-swatch {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: inset 2px 2px 3px rgba(255, 255, 255, 0.75), inset -2px -3px 4px rgba(0, 0, 0, 0.35);
   display: inline-block;
   flex-shrink: 0;
 }
 
-.magnitude-legend {
-  margin: 0;
-  padding: 0 0 0 8px;
-  border-top: 0;
-  border-left: 1px solid rgba(148, 163, 184, 0.26);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
+.plate-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #f59e0b;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.legend-subtitle {
-  margin: 0;
-  color: #f8fafc;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.magnitude-scale {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 7px;
-}
-
-.magnitude-legend .magnitude-item {
-  display: flex;
+.magnitude-legend,
+.legend-note,
+.legend-reset {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-width: auto;
-  text-align: left;
-}
-
-.magnitude-legend .magnitude-shape.is-sphere {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-}
-
-.magnitude-item {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  min-width: 48px;
+  padding: 4px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.35);
   color: #cbd5e1;
-  font-size: 0.62rem;
-  line-height: 1.15;
-  text-align: center;
-}
-
-.magnitude-item small {
-  color: #f8fafc;
-  font-size: 0.62rem;
-  font-weight: 700;
-}
-
-.magnitude-shape {
-  display: block;
-  background: linear-gradient(135deg, #f8fafc 0%, #7dd3fc 32%, #0284c7 68%, #082f49 100%);
-  filter: drop-shadow(0 2px 2px rgba(2, 6, 23, 0.55));
-}
-
-.magnitude-shape.is-sphere {
-  width: 22px;
-  height: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #fff 0, #7dd3fc 25%, #0284c7 68%, #082f49 100%);
-  box-shadow: inset 2px 2px 3px rgba(255, 255, 255, 0.48), inset -2px -3px 4px rgba(0, 0, 0, 0.35);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .legend-reset {
-  width: auto;
-  min-height: 30px;
-  margin-top: 0;
-  border: 1px solid rgba(125, 211, 252, 0.4);
-  border-radius: 9px;
-  background: rgba(14, 165, 233, 0.12);
-  color: #e0f2fe;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 700;
   cursor: pointer;
-  padding-inline: 10px;
-  white-space: nowrap;
-  flex: 0 0 auto;
+  background: rgba(14, 165, 233, 0.12);
+  border-color: rgba(125, 211, 252, 0.4);
+  color: #e0f2fe;
+  font-weight: 700;
 }
 
 .legend-reset:hover,
 .legend-reset:focus-visible {
-  background: rgba(14, 165, 233, 0.24);
+  background: rgba(14, 165, 233, 0.25);
   border-color: #7dd3fc;
   outline: none;
+}
+
+.magnitude-shape.is-sphere {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff 0, #7dd3fc 25%, #0284c7 68%, #082f49 100%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.champion-epicenter-badge {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.cluster-legend-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  color: #fff;
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .maplibregl-popup-content {
@@ -986,7 +973,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .legend-content > .legend-subtitle,
@@ -1060,7 +1047,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 2px 3px;
+    padding: 2px 2px;
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 8px;
     background: rgba(15, 23, 42, 0.38);
@@ -1070,6 +1057,7 @@ body {
     line-height: 1;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
   }
 
   .magnitude-legend {
@@ -1787,6 +1775,14 @@ body {
 
   .stats-panel {
     grid-template-columns: 1fr;
+  }
+
+  .legend-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .legend-extra {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
