@@ -48,6 +48,34 @@
         assertEqual(helpers.formatMagnitudeLabel("invalid"), "—", "invalid magnitude fallback");
     });
 
+    test("normalizes magnitudes without treating missing values as zero", function () {
+        assertEqual(helpers.getNumericMagnitude(0), 0, "real zero magnitude");
+        assertEqual(helpers.getNumericMagnitude(-0.5), -0.5, "negative magnitude");
+        assertEqual(helpers.getNumericMagnitude("2.4"), 2.4, "numeric string magnitude");
+        assertEqual(helpers.getNumericMagnitude(null), null, "missing magnitude");
+        assertEqual(helpers.getNumericMagnitude("invalid"), null, "invalid magnitude");
+    });
+
+    test("normalizes valid USGS features and rejects malformed records", function () {
+        var normalized = helpers.normalizeEarthquakeFeature({
+            id: "test-event",
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [139.7, 35.7, 12.34] },
+            properties: { mag: "-0.4", time: "1767225600000", place: "Test event" }
+        });
+        assert(normalized, "valid feature should be retained");
+        assertEqual(normalized.properties.mag, -0.4, "magnitude normalization");
+        assertEqual(normalized.properties.depth, "12.3", "depth formatting");
+        assertEqual(normalized.properties.eventId, "test-event", "event identity");
+        assertEqual(normalized.properties.magnitudeLabel, "-0.4", "marker label");
+        assertEqual(helpers.normalizeEarthquakeFeature({ properties: {} }), null, "missing geometry");
+        assertEqual(helpers.normalizeEarthquakeFeature({ type: "Feature", geometry: { type: "Point", coordinates: [200, 0, 10] }, properties: { time: 1 } }), null, "invalid longitude");
+        assertEqual(helpers.normalizeEarthquakeFeature({ type: "Feature", geometry: { type: "Point", coordinates: [0, 0, 10] }, properties: { time: "invalid" } }), null, "invalid timestamp");
+        assertEqual(helpers.normalizeEarthquakeFeature({ type: "Feature", geometry: { type: "Point", coordinates: [null, 0, 10] }, properties: { time: 1 } }), null, "null longitude");
+        assertEqual(helpers.normalizeEarthquakeFeature({ type: "Feature", geometry: { type: "Point", coordinates: [0, 0, 10] }, properties: { time: "" } }), null, "empty timestamp");
+        assertEqual(helpers.normalizeEarthquakeFeature({ type: "NotAFeature", geometry: { type: "Point", coordinates: [0, 0, 10] }, properties: { time: 1 } }), null, "invalid GeoJSON type");
+    });
+
     test("selects range presets and fallback", function () {
         assertEqual(helpers.getRangePresetByKey("7d").hours, 168, "7-day preset");
         assertEqual(helpers.getRangePresetByKey("30d").hours, 720, "30-day quick preset");
@@ -247,6 +275,16 @@
         assert(features[0].properties.displayRegion, "classification should add a display label");
     });
 
+    test("does not promote unknown magnitudes over negative earthquakes", function () {
+        var features = [
+            { properties: { mag: null }, geometry: { coordinates: [100, 30, 10] } },
+            { properties: { mag: -0.5 }, geometry: { coordinates: [101, 31, 10] } }
+        ];
+        helpers.markRegionalChampions(features);
+        assertEqual(features[0].properties.isChampion, false, "unknown magnitude should not be champion");
+        assertEqual(features[1].properties.isChampion, true, "known negative magnitude should be champion");
+    });
+
     test("calculates earthquake summary values", function () {
         var now = Date.now();
         helpers.updateSummary({ features: [
@@ -256,6 +294,16 @@
         assertEqual(document.getElementById("total-events").textContent, "2", "event count");
         assertEqual(document.getElementById("strongest-magnitude").textContent, "6.1 M", "strongest magnitude");
         assertEqual(document.getElementById("deepest-depth").textContent, "450 km", "deepest event");
+        assert(document.getElementById("feed-announcement").textContent.includes("2 earthquakes loaded"), "summary should be announced");
+    });
+
+    test("excludes unknown magnitudes from strongest summary", function () {
+        var now = Date.now();
+        helpers.updateSummary({ features: [
+            { properties: { mag: null, time: now }, geometry: { coordinates: [0, 0, 8] } },
+            { properties: { mag: -0.6, time: now - 1 }, geometry: { coordinates: [1, 1, 9] } }
+        ] });
+        assertEqual(document.getElementById("strongest-magnitude").textContent, "-0.6 M", "known negative magnitude should win");
     });
 
     var failed = results.filter(function (result) { return !result.passed; });
