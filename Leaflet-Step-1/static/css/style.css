@@ -1040,26 +1040,18 @@ body {
     text-overflow: ellipsis;
   }
 
-  /* Row 2: Supporting notes and reset button in horizontal scroll row */
+  /* Row 2: Supporting notes and reset button in clean 5-column grid */
   .legend-extra {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
     width: 100%;
-    padding-bottom: 2px;
-  }
-
-  .legend-extra::-webkit-scrollbar {
-    display: none;
   }
 
   .magnitude-legend,
   .legend-note,
   .legend-reset {
-    flex: 1 0 auto;
+    width: 100%;
     min-width: 0;
     min-height: 34px;
     margin: 0;
@@ -1067,13 +1059,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 2px 8px;
+    gap: 2px;
+    padding: 2px 3px;
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 8px;
     background: rgba(15, 23, 42, 0.38);
     color: #e2e8f0;
-    font-size: clamp(0.55rem, 2.25vw, 0.68rem);
+    font-size: clamp(0.5rem, 2.1vw, 0.65rem);
     font-weight: 600;
     line-height: 1;
     text-align: center;
@@ -1717,21 +1709,20 @@ body {
 
   .mag-filters {
     flex: 1 1 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .mag-filters::-webkit-scrollbar {
-    display: none;
+    display: grid;
+    grid-template-columns: auto repeat(5, 1fr);
+    align-items: center;
+    gap: 4px;
+    width: 100%;
   }
 
   .mag-filter-chip {
     min-height: 34px;
-    padding: 0 9px;
-    font-size: 0.72rem;
+    padding: 0 4px;
+    font-size: clamp(0.62rem, 2.3vw, 0.72rem);
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .toolbar-actions {
