@@ -1790,10 +1790,13 @@ function buildMapPanels() {
         setMapPanelExpanded(legendPanel, header, content, !expanded);
     });
 
+    var depthGroup = document.createElement("div");
+    depthGroup.className = "legend-depth-group";
+
     var depthTitle = document.createElement("p");
     depthTitle.className = "legend-subtitle";
     depthTitle.textContent = "Depth";
-    content.appendChild(depthTitle);
+    depthGroup.appendChild(depthTitle);
 
     var list = document.createElement("div");
     list.className = "legend-list";
@@ -1811,7 +1814,8 @@ function buildMapPanels() {
         list.appendChild(button);
     });
 
-    content.appendChild(list);
+    depthGroup.appendChild(list);
+    content.appendChild(depthGroup);
 
     var extraNotes = document.createElement("div");
     extraNotes.className = "legend-extra";

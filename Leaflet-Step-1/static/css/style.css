@@ -462,6 +462,22 @@ body {
   display: none !important;
 }
 
+.legend-depth-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.legend-subtitle {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .legend-list {
   display: flex;
   align-items: center;
@@ -976,7 +992,14 @@ body {
     overflow: hidden;
   }
 
-  .legend-content > .legend-subtitle,
+  .legend-depth-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .legend-subtitle,
   .legend-desktop-copy,
   .legend-unit {
     display: none;
