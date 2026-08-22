@@ -828,7 +828,7 @@ function startAutoRotate() {
             return;
         }
         var center = globeMap.getCenter();
-        center.lng += 0.22;
+        center.lng += 0.42;
         globeMap.jumpTo({ center: center });
         rotationAnimationId = requestAnimationFrame(spin);
     }
