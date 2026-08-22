@@ -51,6 +51,7 @@ const baseStyleIds = {
 };
 const mapAttribution = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, Imagery &copy; <a href="https://www.mapbox.com/">Mapbox</a>';
 const compactViewportQuery = window.matchMedia("(max-width: 640px), (max-width: 900px) and (max-height: 500px)");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const zoomEasterEggs = [
     { key: "closer", zoom: 3.5, message: "Closer look activated. The tectonic plates are pretending not to notice." },
     { key: "enhance", zoom: 6, message: "Enhance! Sadly, geology still refuses to load in 4K." },
@@ -70,8 +71,10 @@ let activeDepthRanges = new Set(depthRangeDefinitions.map(function (range) {
 }));
 let requestSeq = 0;
 let activeRequestController = null;
-let autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let autoRotate = !reducedMotionQuery.matches;
 let rotationAnimationId = null;
+let championPingAnimationId = null;
+let championPingLastFrame = 0;
 let rotationControlButton = null;
 let highlightQuakes = { strongest: null, deepest: null, latest: null };
 let selectedQuakeId = null;
@@ -362,6 +365,10 @@ function normalizeEarthquakeFeature(feature) {
     });
     properties.eventId = getQuakeIdentity(normalized);
     properties.isSelected = false;
+    properties.isStrongest = false;
+    properties.isDeepest = false;
+    properties.isLatest = false;
+    properties.isSummaryHighlight = false;
     return normalized;
 }
 
@@ -758,6 +765,130 @@ function startAutoRotate() {
     rotationAnimationId = requestAnimationFrame(spin);
 }
 
+function getChampionPingFrame(elapsed, phaseOffset) {
+    var duration = 2200;
+    var time = Number.isFinite(Number(elapsed)) ? Number(elapsed) : 0;
+    var offset = Number.isFinite(Number(phaseOffset)) ? Number(phaseOffset) : 0;
+    var phase = (((time / duration) + offset) % 1 + 1) % 1;
+    var easedPhase = 1 - Math.pow(1 - phase, 2);
+    return {
+        phase: phase,
+        expansion: 4 + (18 * easedPhase),
+        opacity: 0.78 * Math.pow(1 - phase, 1.45)
+    };
+}
+
+function getChampionPingRadiusExpression(expansion) {
+    return [
+        "+",
+        [
+            "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
+            0, 13,
+            4, 18,
+            6, 24,
+            8, 32
+        ],
+        expansion
+    ];
+}
+
+function setChampionPingLayerFrame(layerId, frame) {
+    if (!globeMap || !globeMap.getLayer(layerId)) {
+        return;
+    }
+    globeMap.setPaintProperty(layerId, "circle-radius", getChampionPingRadiusExpression(frame.expansion));
+    globeMap.setPaintProperty(layerId, "circle-opacity", frame.opacity * 0.13);
+    globeMap.setPaintProperty(layerId, "circle-stroke-opacity", frame.opacity);
+}
+
+function hasVisiblePingCandidates(features, activeRanges) {
+    var ranges = activeRanges instanceof Set ? activeRanges : new Set(activeRanges || []);
+    return Array.isArray(features) && features.some(function (feature) {
+        var properties = feature && feature.properties;
+        return properties && ranges.has(properties.depthKey) &&
+            (properties.isChampion === true || properties.isSummaryHighlight === true);
+    });
+}
+
+function getChampionPingMotionMode(options) {
+    if (!options.hasMap || !options.hasLayerA || !options.hasLayerB || !options.quakesVisible ||
+            !options.hasCandidates || options.documentHidden) {
+        return "off";
+    }
+    return options.reducedMotion ? "static" : "animated";
+}
+
+function getCurrentChampionPingMotionMode() {
+    return getChampionPingMotionMode({
+        hasMap: Boolean(globeMap),
+        hasLayerA: Boolean(globeMap && globeMap.getLayer("quake-champion-ping-a")),
+        hasLayerB: Boolean(globeMap && globeMap.getLayer("quake-champion-ping-b")),
+        quakesVisible: quakesVisible,
+        hasCandidates: hasVisiblePingCandidates(currentGeojson.features, activeDepthRanges),
+        documentHidden: document.hidden,
+        reducedMotion: reducedMotionQuery.matches
+    });
+}
+
+function transitionChampionPingMotion(options) {
+    if (options.animationId !== null && options.animationId !== undefined) {
+        options.cancelFrame(options.animationId);
+    }
+    if (options.mode === "static") {
+        options.applyStaticFrames();
+        return null;
+    }
+    if (options.mode === "animated") {
+        return options.requestFrame(options.renderFrame);
+    }
+    return null;
+}
+
+function renderChampionPings(timestamp) {
+    if (getCurrentChampionPingMotionMode() !== "animated") {
+        championPingAnimationId = null;
+        return;
+    }
+
+    if (!championPingLastFrame || timestamp - championPingLastFrame >= 32) {
+        championPingLastFrame = timestamp;
+        setChampionPingLayerFrame("quake-champion-ping-a", getChampionPingFrame(timestamp, 0));
+        setChampionPingLayerFrame("quake-champion-ping-b", getChampionPingFrame(timestamp, 0.5));
+    }
+    championPingAnimationId = requestAnimationFrame(renderChampionPings);
+}
+
+function syncChampionPingMotion() {
+    championPingLastFrame = 0;
+    var motionMode = getCurrentChampionPingMotionMode();
+    championPingAnimationId = transitionChampionPingMotion({
+        animationId: championPingAnimationId,
+        mode: motionMode,
+        cancelFrame: function (animationId) {
+            cancelAnimationFrame(animationId);
+        },
+        requestFrame: function (callback) {
+            return requestAnimationFrame(callback);
+        },
+        renderFrame: renderChampionPings,
+        applyStaticFrames: function () {
+            setChampionPingLayerFrame("quake-champion-ping-a", getChampionPingFrame(0, 0.16));
+            setChampionPingLayerFrame("quake-champion-ping-b", getChampionPingFrame(0, 0.62));
+        }
+    });
+}
+
+function handleReducedMotionChange(event) {
+    if (event && event.matches) {
+        setAutoRotate(false);
+    }
+    syncChampionPingMotion();
+    return {
+        reducedMotion: Boolean(event && event.matches),
+        autoRotate: autoRotate
+    };
+}
+
 function buildBaseStyle() {
     var sources = {};
     var layers = [];
@@ -796,6 +927,16 @@ function hexChannelMix(hex, target, amount) {
         return Math.round(channel + (target - channel) * amount);
     });
     return "rgb(" + channels.join(",") + ")";
+}
+
+function getDepthColorExpression(lightenAmount) {
+    var expression = ["match", ["get", "depthKey"]];
+    depthRangeDefinitions.forEach(function (range) {
+        expression.push(range.key);
+        expression.push(lightenAmount ? hexChannelMix(range.color, 255, lightenAmount) : range.color);
+    });
+    expression.push(lightenAmount ? hexChannelMix(depthRangeDefinitions[0].color, 255, lightenAmount) : depthRangeDefinitions[0].color);
+    return expression;
 }
 
 function createPyramidImage(color) {
@@ -1174,11 +1315,12 @@ function applyDepthFilters() {
         globeMap.setLayoutProperty("quake-champions", "visibility", quakesVisible ? "visible" : "none");
     }
 
-    ["quake-clusters", "quake-cluster-count", "quake-selection", "quake-champion-selection"].forEach(function (layerId) {
+    ["quake-clusters", "quake-cluster-count", "quake-champion-ping-a", "quake-champion-ping-b", "quake-selection", "quake-champion-selection"].forEach(function (layerId) {
         if (globeMap.getLayer(layerId)) {
             globeMap.setLayoutProperty(layerId, "visibility", quakesVisible ? "visible" : "none");
         }
     });
+    syncChampionPingMotion();
     refreshEarthquakeSource();
 }
 
@@ -1416,13 +1558,12 @@ function buildMapPanels() {
     function syncPanelsForViewport(event) {
         var compact = event ? event.matches : compactViewportQuery.matches;
         var restoreBaseFocus = compact && baseContent.contains(document.activeElement);
-        var restoreLegendFocus = compact && content.contains(document.activeElement);
         setMapPanelExpanded(basePanel, baseHeader, baseContent, !compact);
-        setMapPanelExpanded(legendPanel, header, content, !compact);
+        if (!event) {
+            setMapPanelExpanded(legendPanel, header, content, true);
+        }
         if (restoreBaseFocus) {
             baseHeader.focus();
-        } else if (restoreLegendFocus) {
-            header.focus();
         }
     }
     syncPanelsForViewport();
@@ -1581,6 +1722,28 @@ function createMap() {
             paint: {
                 "text-color": "#ffffff"
             }
+        });
+
+        ["a", "b"].forEach(function (wave) {
+            globeMap.addLayer({
+                id: "quake-champion-ping-" + wave,
+                type: "circle",
+                source: "earthquakes",
+                filter: [
+                    "any",
+                    ["==", ["get", "isChampion"], true],
+                    ["==", ["get", "isSummaryHighlight"], true]
+                ],
+                paint: {
+                    "circle-radius": getChampionPingRadiusExpression(4),
+                    "circle-color": getDepthColorExpression(0),
+                    "circle-opacity": 0.08,
+                    "circle-blur": 0.25,
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": getDepthColorExpression(0.62),
+                    "circle-stroke-opacity": 0.72
+                }
+            });
         });
 
         globeMap.addLayer({
@@ -1754,6 +1917,7 @@ function createMap() {
 
         applyDepthFilters();
         mapLoaded = true;
+        syncChampionPingMotion();
 
         if (currentGeojson.features.length) {
             refreshEarthquakeSource();
@@ -1811,6 +1975,12 @@ function updateSummary(data) {
     }, quakes[0]);
 
     highlightQuakes = { strongest: strongestQuake, deepest: deepestQuake, latest: latestQuake };
+    quakes.forEach(function (quake) {
+        quake.properties.isStrongest = quake === strongestQuake;
+        quake.properties.isDeepest = quake === deepestQuake;
+        quake.properties.isLatest = quake === latestQuake;
+        quake.properties.isSummaryHighlight = quake.properties.isStrongest || quake.properties.isDeepest || quake.properties.isLatest;
+    });
 
     if (totalEl) totalEl.textContent = quakes.length.toLocaleString();
     if (strongestEl) strongestEl.textContent = strongestQuake ? getNumericMagnitude(strongestQuake.properties.mag).toFixed(1) + " M" : "—";
@@ -1888,6 +2058,7 @@ function loadEarthquakeData(rangeKey) {
 
             if (mapLoaded && globeMap.getSource("earthquakes")) {
                 refreshEarthquakeSource();
+                syncChampionPingMotion();
             }
         })
         .catch(function (error) {
@@ -1948,19 +2119,25 @@ window.earthquakeApp.test = {
     formatRelativeTime: formatRelativeTime,
     formatMagnitudeLabel: formatMagnitudeLabel,
     getEventDetail: getEventDetail,
+    getChampionPingFrame: getChampionPingFrame,
+    getChampionPingMotionMode: getChampionPingMotionMode,
     getChampionGroup: getChampionGroup,
     getCountryAt: getCountryAt,
     getDepthRangeKey: getDepthRangeKey,
+    getDepthColorExpression: getDepthColorExpression,
     getMagnitudeShapeKey: getMagnitudeShapeKey,
     getNumericMagnitude: getNumericMagnitude,
     getOffshoreArea: getOffshoreArea,
     getQuakeIdentity: getQuakeIdentity,
     getRangePresetByKey: getRangePresetByKey,
     getZoomEasterEgg: getZoomEasterEgg,
+    handleReducedMotionChange: handleReducedMotionChange,
+    hasVisiblePingCandidates: hasVisiblePingCandidates,
     markRegionalChampions: markRegionalChampions,
     normalizeEarthquakeFeature: normalizeEarthquakeFeature,
     setActiveQuakePopup: setActiveQuakePopup,
     setMapPanelExpanded: setMapPanelExpanded,
+    transitionChampionPingMotion: transitionChampionPingMotion,
     updateSummary: updateSummary
 };
 
@@ -1971,6 +2148,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     createMap();
     buildMapPanels();
+    if (reducedMotionQuery.addEventListener) {
+        reducedMotionQuery.addEventListener("change", handleReducedMotionChange);
+    } else {
+        reducedMotionQuery.addListener(handleReducedMotionChange);
+    }
+    document.addEventListener("visibilitychange", syncChampionPingMotion);
     var select = document.getElementById("range-select");
     if (select) {
         rangePresets.forEach(function (preset) {

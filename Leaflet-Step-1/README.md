@@ -13,10 +13,11 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 - Light, dark, and street basemaps
 - Toggleable earthquake and depth layers with a one-click filter reset
 - Phone-first layout with compact 2×2 stats, collapsible Layers control, and a safe-area-aware legend sheet
-- Collapsible map legend and persistent selected-event highlighting
+- Default-open, collapsible map legend and persistent selected-event highlighting
 - Country or offshore-area labels in earthquake details
 - Lazy USGS popup enrichment with named faults, tectonic plates, and concise tectonic context when authoritative detail metadata is available
-- Broad geographic-group champions marked with ringed epicenter symbols around glossy, depth-colored cores
+- Broad geographic-group champions marked with ringed epicenter symbols and staggered, depth-colored seismic pings around glossy cores
+- Depth-colored seismic pings also identify the current strongest, deepest, and latest earthquakes
 - Keyboard-accessible controls and reduced-motion support
 - Responsive layouts for desktop and mobile screens
 
@@ -60,6 +61,7 @@ Scientific popup context is loaded only when an individual earthquake popup open
 ## Accessibility
 
 - The globe does not auto-rotate when the operating system requests reduced motion.
+- Champion seismic pings become stable rings when the operating system requests reduced motion.
 - The map includes a pause/resume rotation control.
 - Summary cards and legend filters are keyboard operable.
 - Time-range presets, the complete range selector, and the collapsible legend are keyboard operable.

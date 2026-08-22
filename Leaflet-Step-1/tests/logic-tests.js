@@ -31,6 +31,16 @@
         assertEqual(helpers.getDepthRangeKey("invalid"), "0-10", "invalid depth fallback");
     });
 
+    test("builds ping colors from the depth palette", function () {
+        var fill = helpers.getDepthColorExpression(0);
+        var stroke = helpers.getDepthColorExpression(0.62);
+        assertEqual(fill[0], "match", "depth color expression type");
+        assertEqual(fill[3], "#7ae582", "shallow ping fill");
+        assertEqual(fill[13], "#8b0000", "deep ping fill");
+        assert(stroke[3] !== fill[3], "ping stroke should lighten the depth color");
+        assert(stroke[13] !== fill[13], "deep ping stroke should remain visible");
+    });
+
     test("uses spheres for regular markers at every magnitude", function () {
         assertEqual(helpers.getMagnitudeShapeKey(-0.4), "sphere", "negative magnitude");
         assertEqual(helpers.getMagnitudeShapeKey(2), "sphere", "small magnitude");
@@ -49,6 +59,88 @@
         assertEqual(selection.width, 128, "champion selection canvas width");
         assertEqual(selection.data[((64 * selection.width + 64) * 4) + 3], 0, "champion selection center should remain transparent");
         assert(selection.data[((6 * selection.width + 64) * 4) + 3] > 0, "champion selection ring should surround the epicenter");
+    });
+
+    test("expands and fades staggered champion ping waves", function () {
+        var start = helpers.getChampionPingFrame(0, 0);
+        var midway = helpers.getChampionPingFrame(1100, 0);
+        var staggered = helpers.getChampionPingFrame(0, 0.5);
+        var reset = helpers.getChampionPingFrame(2200, 0);
+        assertEqual(start.phase, 0, "first wave starts at the epicenter");
+        assert(midway.expansion > start.expansion, "ping radius should expand over time");
+        assert(midway.opacity < start.opacity, "ping should fade as it expands");
+        assertEqual(staggered.phase, midway.phase, "second wave should be half a cycle ahead");
+        assertEqual(reset.phase, 0, "ping should restart after one cycle");
+    });
+
+    test("honors champion ping motion lifecycle conditions", function () {
+        var active = { hasMap: true, hasLayerA: true, hasLayerB: true, quakesVisible: true, hasCandidates: true, documentHidden: false, reducedMotion: false };
+        assertEqual(helpers.getChampionPingMotionMode(active), "animated", "visible champion pings should animate");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { reducedMotion: true })), "static", "reduced motion should use stable rings");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { documentHidden: true })), "off", "hidden tabs should stop pings");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { quakesVisible: false })), "off", "hidden earthquakes should stop pings");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { hasLayerA: false })), "off", "missing first ping layer should stop animation");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { hasLayerB: false })), "off", "missing second ping layer should stop animation");
+        assertEqual(helpers.getChampionPingMotionMode(Object.assign({}, active, { hasCandidates: false })), "off", "no visible ping candidates should stop animation");
+
+        var reducedState = helpers.handleReducedMotionChange({ matches: true });
+        assertEqual(reducedState.reducedMotion, true, "preference handler should detect reduced motion");
+        assertEqual(reducedState.autoRotate, false, "enabling reduced motion should stop globe rotation");
+        var restoredState = helpers.handleReducedMotionChange({ matches: false });
+        assertEqual(restoredState.autoRotate, false, "disabling reduced motion should not restart rotation automatically");
+    });
+
+    test("detects ping candidates that survive depth filters", function () {
+        var features = [
+            { properties: { depthKey: "0-10", isChampion: true, isSummaryHighlight: false } },
+            { properties: { depthKey: "90+", isChampion: false, isSummaryHighlight: true } },
+            { properties: { depthKey: "10-30", isChampion: false, isSummaryHighlight: false } }
+        ];
+        assertEqual(helpers.hasVisiblePingCandidates(features, new Set(["0-10"])), true, "visible champion should activate pings");
+        assertEqual(helpers.hasVisiblePingCandidates(features, new Set(["90+"])), true, "visible summary highlight should activate pings");
+        assertEqual(helpers.hasVisiblePingCandidates(features, new Set(["10-30"])), false, "ordinary visible earthquakes should not keep ping animation running");
+        assertEqual(helpers.hasVisiblePingCandidates(features, new Set()), false, "fully filtered candidates should stop pings");
+        assertEqual(helpers.hasVisiblePingCandidates([], new Set(["0-10"])), false, "empty feeds should stop pings");
+    });
+
+    test("schedules exactly one champion ping frame through lifecycle changes", function () {
+        var nextId = 0;
+        var pending = new Set();
+        var staticPaints = 0;
+        function requestFrame() {
+            var id = ++nextId;
+            pending.add(id);
+            return id;
+        }
+        function cancelFrame(id) {
+            pending.delete(id);
+        }
+        function transition(animationId, mode) {
+            return helpers.transitionChampionPingMotion({
+                animationId: animationId,
+                mode: mode,
+                requestFrame: requestFrame,
+                cancelFrame: cancelFrame,
+                renderFrame: function () {},
+                applyStaticFrames: function () { staticPaints += 1; }
+            });
+        }
+
+        var animationId = transition(null, "animated");
+        assertEqual(pending.size, 1, "animation should request one frame");
+        animationId = transition(animationId, "animated");
+        assertEqual(pending.size, 1, "repeated synchronization should replace rather than duplicate frames");
+        animationId = transition(animationId, "static");
+        assertEqual(pending.size, 0, "reduced motion should cancel animation");
+        assertEqual(staticPaints, 1, "reduced motion should paint stable rings once");
+        animationId = transition(animationId, "animated");
+        assertEqual(pending.size, 1, "leaving reduced motion should restart the ping frame");
+        animationId = transition(animationId, "off");
+        assertEqual(pending.size, 0, "hidden tabs or earthquakes should cancel pending frames");
+        animationId = transition(animationId, "animated");
+        assertEqual(pending.size, 1, "restoring visibility should restart one frame");
+        transition(animationId, "off");
+        assertEqual(pending.size, 0, "final shutdown should leave no pending frame");
     });
 
     test("formats embedded marker magnitudes", function () {
@@ -299,14 +391,22 @@
 
     test("calculates earthquake summary values", function () {
         var now = Date.now();
-        helpers.updateSummary({ features: [
+        var features = [
             { properties: { mag: 2.5, time: now - 120000 }, geometry: { coordinates: [0, 0, 8] } },
             { properties: { mag: 6.1, time: now - 60000 }, geometry: { coordinates: [1, 1, 450] } }
-        ] });
+        ];
+        helpers.updateSummary({ features: features });
         assertEqual(document.getElementById("total-events").textContent, "2", "event count");
         assertEqual(document.getElementById("strongest-magnitude").textContent, "6.1 M", "strongest magnitude");
         assertEqual(document.getElementById("deepest-depth").textContent, "450 km", "deepest event");
         assert(document.getElementById("feed-announcement").textContent.includes("2 earthquakes loaded"), "summary should be announced");
+        assertEqual(features[0].properties.isStrongest, false, "weaker event should not be strongest");
+        assertEqual(features[0].properties.isDeepest, false, "shallower event should not be deepest");
+        assertEqual(features[0].properties.isLatest, false, "older event should not be latest");
+        assertEqual(features[1].properties.isStrongest, true, "strongest event should be flagged for pinging");
+        assertEqual(features[1].properties.isDeepest, true, "deepest event should be flagged for pinging");
+        assertEqual(features[1].properties.isLatest, true, "latest event should be flagged for pinging");
+        assertEqual(features[1].properties.isSummaryHighlight, true, "one event with several roles should receive one ping feature");
     });
 
     test("excludes unknown magnitudes from strongest summary", function () {
