@@ -452,8 +452,8 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px 12px;
+  justify-content: flex-start;
+  gap: 8px 10px;
   flex: 1 1 auto;
   overflow: visible;
 }
@@ -483,6 +483,14 @@ body {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+}
+
+.legend-section-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(148, 163, 184, 0.28);
+  margin: 0 2px;
+  flex-shrink: 0;
 }
 
 .legend-extra {
@@ -1001,7 +1009,8 @@ body {
 
   .legend-subtitle,
   .legend-desktop-copy,
-  .legend-unit {
+  .legend-unit,
+  .legend-section-divider {
     display: none;
   }
 

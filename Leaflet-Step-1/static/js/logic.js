@@ -1817,6 +1817,11 @@ function buildMapPanels() {
     depthGroup.appendChild(list);
     content.appendChild(depthGroup);
 
+    var divider = document.createElement("div");
+    divider.className = "legend-section-divider";
+    divider.setAttribute("aria-hidden", "true");
+    content.appendChild(divider);
+
     var extraNotes = document.createElement("div");
     extraNotes.className = "legend-extra";
 
