@@ -243,7 +243,7 @@ function formatRelativeTime(timestamp) {
 }
 
 function getChampionGroup(lon, lat) {
-    // Coarse, stable groups keep champion stars limited to a handful worldwide.
+    // Coarse, stable groups keep champion markers limited to a handful worldwide.
     if (lat <= -60) return "Antarctica";
 
     // Pacific islands with negative longitude (Hawaii, Fiji, Tonga)
@@ -570,7 +570,7 @@ function buildPopupContent(props) {
         var championDepthRange = depthRangeDefinitions.find(function (range) {
             return range.key === championDepthKey;
         }) || depthRangeDefinitions[1];
-        championBadge.appendChild(createChampionStarburstBadge(championDepthRange.color));
+        championBadge.appendChild(createChampionEpicenterBadge(championDepthRange.color));
         championBadge.appendChild(document.createTextNode("Strongest in the " + (props.championGroup || "unknown") + " group for this range"));
         content.appendChild(championBadge);
     }
@@ -1024,8 +1024,42 @@ function createSelectionRingImage() {
     return ctx.getImageData(0, 0, width, height);
 }
 
-function createStarImage(color) {
-    var width = 112;
+function createChampionSelectionRingImage() {
+    var width = 128;
+    var height = 128;
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext("2d");
+    var cx = width / 2;
+    var cy = height / 2;
+
+    var glow = ctx.createRadialGradient(cx, cy, 50, cx, cy, 61);
+    glow.addColorStop(0, "rgba(125, 211, 252, 0)");
+    glow.addColorStop(0.65, "rgba(125, 211, 252, 0.22)");
+    glow.addColorStop(1, "rgba(125, 211, 252, 0)");
+    ctx.beginPath();
+    ctx.arc(cx, cy, 61, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 54, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.98)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 58, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.95)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    return ctx.getImageData(0, 0, width, height);
+}
+
+function createEpicenterImage(color) {
+    var width = 104;
     var height = 104;
     var canvas = document.createElement("canvas");
     canvas.width = width;
@@ -1033,58 +1067,45 @@ function createStarImage(color) {
     var ctx = canvas.getContext("2d");
     var cx = width / 2;
     var cy = height / 2;
-    var outerR = 42;
-    var innerR = 24;
-    var coreR = 23;
-    var spikeCount = 12;
+    var coreR = 24;
+    var innerRingR = 33;
+    var outerRingR = 42;
 
-    function getStarPoints(centerX, centerY) {
-        var points = [];
-        for (var i = 0; i < spikeCount * 2; i++) {
-            var radius = i % 2 === 0 ? outerR : innerR;
-            var angle = (Math.PI / spikeCount) * i - Math.PI / 2;
-            points.push({
-                x: centerX + radius * Math.cos(angle),
-                y: centerY + radius * Math.sin(angle)
-            });
-        }
-        return points;
-    }
-
-    function traceStar(points) {
-        ctx.beginPath();
-        points.forEach(function (point, index) {
-            if (index === 0) {
-                ctx.moveTo(point.x, point.y);
-            } else {
-                ctx.lineTo(point.x, point.y);
-            }
-        });
-        ctx.closePath();
-    }
-
-    var topPoints = getStarPoints(cx, cy);
-
-    // The centered glow and core pin the starburst directly to its geographic point.
-    var glow = ctx.createRadialGradient(cx, cy, outerR * 0.28, cx, cy, outerR * 1.1);
-    glow.addColorStop(0, "rgba(255, 215, 90, 0.5)");
-    glow.addColorStop(1, "rgba(255, 215, 90, 0)");
+    // A symmetric halo keeps the epicenter visible without lifting it off the globe.
+    var glow = ctx.createRadialGradient(cx, cy, innerRingR, cx, cy, 48);
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+    glow.addColorStop(0.52, hexChannelMix(color, 255, 0.48));
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.beginPath();
-    ctx.arc(cx, cy, outerR * 1.1, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.42;
     ctx.fillStyle = glow;
     ctx.fill();
+    ctx.restore();
 
-    // The beveled face keeps the depth color prominent without lifting off the globe.
-    var bodyGrad = ctx.createRadialGradient(cx - outerR * 0.3, cy - outerR * 0.35, outerR * 0.08, cx, cy, outerR);
-    bodyGrad.addColorStop(0, hexChannelMix(color, 255, 0.78));
-    bodyGrad.addColorStop(0.42, hexChannelMix(color, 255, 0.12));
-    bodyGrad.addColorStop(0.72, color);
-    bodyGrad.addColorStop(1, hexChannelMix(color, 0, 0.42));
-    traceStar(topPoints);
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
+    // Broken seismic rings distinguish regional champions from ordinary spheres.
+    [
+        { radius: outerRingR, dash: [16, 7], offset: 1 },
+        { radius: innerRingR, dash: [11, 6], offset: -4 }
+    ].forEach(function (ring) {
+        ctx.save();
+        ctx.setLineDash(ring.dash);
+        ctx.lineDashOffset = ring.offset;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ring.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = hexChannelMix(color, 0, 0.62);
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, ring.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = hexChannelMix(color, 255, 0.68);
+        ctx.lineWidth = 2.25;
+        ctx.stroke();
+        ctx.restore();
+    });
 
-    // A rounded core makes the radial spikes read as a spherical starburst.
+    // The depth-colored spherical core remains centered on the earthquake coordinate.
     var coreGrad = ctx.createRadialGradient(cx - 8, cy - 9, 2, cx, cy, coreR * 1.08);
     coreGrad.addColorStop(0, hexChannelMix(color, 255, 0.86));
     coreGrad.addColorStop(0.32, hexChannelMix(color, 255, 0.28));
@@ -1094,30 +1115,26 @@ function createStarImage(color) {
     ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
     ctx.fillStyle = coreGrad;
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 234, 160, 0.72)";
+    ctx.strokeStyle = hexChannelMix(color, 0, 0.7);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR - 2, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.68)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // A dark under-stroke and bright inner stroke form the beveled rim.
-    traceStar(topPoints);
-    ctx.strokeStyle = "rgba(120, 53, 15, 0.94)";
-    ctx.lineWidth = 5;
-    ctx.lineJoin = "round";
-    ctx.stroke();
-    traceStar(topPoints);
-    ctx.strokeStyle = "rgba(255, 214, 90, 0.98)";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Specular lighting remains clipped to the raised top surface.
-    var highlight = ctx.createRadialGradient(cx - outerR * 0.3, cy - outerR * 0.4, 1, cx - outerR * 0.3, cy - outerR * 0.4, outerR * 0.62);
+    // A compact highlight preserves the glossy sphere language of regular markers.
+    var highlight = ctx.createRadialGradient(cx - 9, cy - 10, 1, cx - 9, cy - 10, 14);
     highlight.addColorStop(0, "rgba(255, 255, 255, 0.94)");
     highlight.addColorStop(1, "rgba(255, 255, 255, 0)");
-    traceStar(topPoints);
     ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR - 2, 0, Math.PI * 2);
     ctx.clip();
     ctx.beginPath();
-    ctx.arc(cx - outerR * 0.28, cy - outerR * 0.35, outerR * 0.62, 0, Math.PI * 2);
+    ctx.ellipse(cx - 9, cy - 10, 13, 9, -0.4, 0, Math.PI * 2);
     ctx.fillStyle = highlight;
     ctx.fill();
     ctx.restore();
@@ -1125,13 +1142,13 @@ function createStarImage(color) {
     return ctx.getImageData(0, 0, width, height);
 }
 
-function createChampionStarburstBadge(color) {
+function createChampionEpicenterBadge(color) {
     var canvas = document.createElement("canvas");
-    canvas.width = 112;
+    canvas.width = 104;
     canvas.height = 104;
-    canvas.className = "champion-starburst-badge";
+    canvas.className = "champion-epicenter-badge";
     canvas.setAttribute("aria-hidden", "true");
-    canvas.getContext("2d").putImageData(createStarImage(color), 0, 0);
+    canvas.getContext("2d").putImageData(createEpicenterImage(color), 0, 0);
     return canvas;
 }
 
@@ -1148,16 +1165,16 @@ function applyDepthFilters() {
     ]);
     globeMap.setLayoutProperty("quake-spheres", "visibility", quakesVisible ? "visible" : "none");
 
-    if (globeMap.getLayer("quake-stars")) {
-        globeMap.setFilter("quake-stars", [
+    if (globeMap.getLayer("quake-champions")) {
+        globeMap.setFilter("quake-champions", [
             "all",
             ["in", ["get", "depthKey"], ["literal", active]],
             ["==", ["get", "isChampion"], true]
         ]);
-        globeMap.setLayoutProperty("quake-stars", "visibility", quakesVisible ? "visible" : "none");
+        globeMap.setLayoutProperty("quake-champions", "visibility", quakesVisible ? "visible" : "none");
     }
 
-    ["quake-clusters", "quake-cluster-count", "quake-selection"].forEach(function (layerId) {
+    ["quake-clusters", "quake-cluster-count", "quake-selection", "quake-champion-selection"].forEach(function (layerId) {
         if (globeMap.getLayer(layerId)) {
             globeMap.setLayoutProperty(layerId, "visibility", quakesVisible ? "visible" : "none");
         }
@@ -1369,18 +1386,18 @@ function buildMapPanels() {
     magnitudeLegend.innerHTML = '<p class="legend-subtitle">Magnitude · label &amp; size</p><div class="magnitude-scale"><span class="magnitude-item"><i class="magnitude-shape is-sphere"></i><span class="legend-desktop-copy">Sphere marker<br><small>Number = magnitude</small></span><span class="legend-mobile-copy">Magnitude</span></span></div>';
     content.appendChild(magnitudeLegend);
 
-    var starNote = document.createElement("p");
-    starNote.className = "legend-note";
-    starNote.appendChild(createChampionStarburstBadge(depthRangeDefinitions[1].color));
-    var starDesktopCopy = document.createElement("span");
-    starDesktopCopy.className = "legend-desktop-copy";
-    starDesktopCopy.textContent = "Strongest quake per broad geographic group";
-    var starMobileCopy = document.createElement("span");
-    starMobileCopy.className = "legend-mobile-copy";
-    starMobileCopy.textContent = "Champion";
-    starNote.appendChild(starDesktopCopy);
-    starNote.appendChild(starMobileCopy);
-    content.appendChild(starNote);
+    var championNote = document.createElement("p");
+    championNote.className = "legend-note";
+    championNote.appendChild(createChampionEpicenterBadge(depthRangeDefinitions[1].color));
+    var championDesktopCopy = document.createElement("span");
+    championDesktopCopy.className = "legend-desktop-copy";
+    championDesktopCopy.textContent = "Strongest quake per broad geographic group";
+    var championMobileCopy = document.createElement("span");
+    championMobileCopy.className = "legend-mobile-copy";
+    championMobileCopy.textContent = "Champion";
+    championNote.appendChild(championDesktopCopy);
+    championNote.appendChild(championMobileCopy);
+    content.appendChild(championNote);
 
     var clusterNote = document.createElement("p");
     clusterNote.className = "legend-note";
@@ -1523,9 +1540,10 @@ function createMap() {
 
         depthRangeDefinitions.forEach(function (range) {
             globeMap.addImage("sphere-" + range.key, createSphereImage(range.color), { pixelRatio: 2 });
-            globeMap.addImage("star-" + range.key, createStarImage(range.color), { pixelRatio: 2 });
+            globeMap.addImage("epicenter-" + range.key, createEpicenterImage(range.color), { pixelRatio: 2 });
         });
         globeMap.addImage("selection-ring", createSelectionRingImage(), { pixelRatio: 2 });
+        globeMap.addImage("champion-selection-ring", createChampionSelectionRingImage(), { pixelRatio: 2 });
 
         globeMap.addLayer({
             id: "quake-clusters",
@@ -1569,7 +1587,11 @@ function createMap() {
             id: "quake-selection",
             type: "symbol",
             source: "earthquakes",
-            filter: ["==", ["get", "isSelected"], true],
+            filter: [
+                "all",
+                ["==", ["get", "isSelected"], true],
+                ["!=", ["get", "isChampion"], true]
+            ],
             layout: {
                 "icon-image": "selection-ring",
                 "icon-size": [
@@ -1630,19 +1652,21 @@ function createMap() {
             }
         });
 
+        var championIconSize = [
+            "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
+            0, 0.55,
+            4, 0.75,
+            6, 1.0,
+            8, 1.35
+        ];
+
         globeMap.addLayer({
-            id: "quake-stars",
+            id: "quake-champions",
             type: "symbol",
             source: "earthquakes",
             layout: {
-                "icon-image": ["concat", "star-", ["get", "depthKey"]],
-                "icon-size": [
-                    "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
-                    0, 0.55,
-                    4, 0.75,
-                    6, 1.0,
-                    8, 1.35
-                ],
+                "icon-image": ["concat", "epicenter-", ["get", "depthKey"]],
+                "icon-size": championIconSize,
                 "icon-anchor": "center",
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
@@ -1670,6 +1694,25 @@ function createMap() {
             }
         });
 
+        // Champion artwork has its own larger, topmost ring so selection stays visible.
+        globeMap.addLayer({
+            id: "quake-champion-selection",
+            type: "symbol",
+            source: "earthquakes",
+            filter: [
+                "all",
+                ["==", ["get", "isSelected"], true],
+                ["==", ["get", "isChampion"], true]
+            ],
+            layout: {
+                "icon-image": "champion-selection-ring",
+                "icon-size": championIconSize,
+                "icon-anchor": "center",
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true
+            }
+        });
+
         function handleQuakeClick(event) {
             var feature = event.features && event.features[0];
             if (!feature) {
@@ -1681,7 +1724,7 @@ function createMap() {
         }
 
         globeMap.on("click", "quake-spheres", handleQuakeClick);
-        globeMap.on("click", "quake-stars", handleQuakeClick);
+        globeMap.on("click", "quake-champions", handleQuakeClick);
         globeMap.on("click", "quake-clusters", function (event) {
             var cluster = event.features && event.features[0];
             if (!cluster) {
@@ -1700,7 +1743,7 @@ function createMap() {
                 });
         });
 
-        ["quake-spheres", "quake-stars", "quake-clusters"].forEach(function (layerId) {
+        ["quake-spheres", "quake-champions", "quake-clusters"].forEach(function (layerId) {
             globeMap.on("mouseenter", layerId, function () {
                 globeMap.getCanvas().style.cursor = "pointer";
             });
@@ -1896,6 +1939,8 @@ window.earthquakeApp = window.earthquakeApp || {};
 window.earthquakeApp.test = {
     buildPopupContent: buildPopupContent,
     buildRangeUrl: buildRangeUrl,
+    createChampionSelectionRingImage: createChampionSelectionRingImage,
+    createEpicenterImage: createEpicenterImage,
     classifyGeography: classifyGeography,
     extractNamedFaults: extractNamedFaults,
     extractPlateNames: extractPlateNames,

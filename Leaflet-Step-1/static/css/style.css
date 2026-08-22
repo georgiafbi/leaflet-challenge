@@ -660,7 +660,7 @@ body {
   display: none;
 }
 
-.champion-starburst-badge {
+.champion-epicenter-badge {
   width: 26px;
   height: auto;
   display: block;
@@ -681,7 +681,7 @@ body {
   gap: 6px;
 }
 
-.champion-badge .champion-starburst-badge {
+.champion-badge .champion-epicenter-badge {
   width: 30px;
 }
 
@@ -1059,7 +1059,7 @@ body {
     max-width: none;
   }
 
-  .champion-starburst-badge {
+  .champion-epicenter-badge {
     width: 23px;
   }
 

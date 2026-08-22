@@ -39,6 +39,18 @@
         assertEqual(helpers.getMagnitudeShapeKey("invalid"), "sphere", "invalid magnitude fallback");
     });
 
+    test("creates centered ringed epicenter artwork for champions", function () {
+        var image = helpers.createEpicenterImage("#4dabf7");
+        var selection = helpers.createChampionSelectionRingImage();
+        assertEqual(image.width, 104, "epicenter canvas width");
+        assertEqual(image.height, 104, "epicenter canvas height");
+        assert(image.data[((52 * image.width + 52) * 4) + 3] > 0, "epicenter core should occupy the canvas center");
+        assertEqual(image.data[3], 0, "epicenter artwork should not clip into the top-left corner");
+        assertEqual(selection.width, 128, "champion selection canvas width");
+        assertEqual(selection.data[((64 * selection.width + 64) * 4) + 3], 0, "champion selection center should remain transparent");
+        assert(selection.data[((6 * selection.width + 64) * 4) + 3] > 0, "champion selection ring should surround the epicenter");
+    });
+
     test("formats embedded marker magnitudes", function () {
         assertEqual(helpers.formatMagnitudeLabel(5), "5.0", "whole magnitude");
         assertEqual(helpers.formatMagnitudeLabel(2.46), "2.5", "rounded magnitude");

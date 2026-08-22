@@ -16,7 +16,7 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 - Collapsible map legend and persistent selected-event highlighting
 - Country or offshore-area labels in earthquake details
 - Lazy USGS popup enrichment with named faults, tectonic plates, and concise tectonic context when authoritative detail metadata is available
-- Broad geographic-group champions marked with radial, spiky 3D stars wrapped around glossy spherical cores
+- Broad geographic-group champions marked with ringed epicenter symbols around glossy, depth-colored cores
 - Keyboard-accessible controls and reduced-motion support
 - Responsive layouts for desktop and mobile screens
 
@@ -53,7 +53,7 @@ The app queries a fixed start and end time for each selected range. Requests use
 
 Geographic classification uses a hybrid model. Land coordinates are matched locally to a country with the pinned `@rapideditor/country-coder` browser bundle; no per-event geocoding requests are made. Coordinates without a land match receive a named ocean or sea fallback such as **North Pacific Ocean** or **Caribbean Sea**. If the optional lookup bundle cannot load, the app remains usable and falls back to a broad regional label.
 
-Country Coder uses generalized polygons intended for fast client-side lookup. Labels near disputed borders, coastlines, and small islands should therefore be treated as informative rather than authoritative. Champion stars intentionally use a separate set of six broad geographic groups, preventing country-level classification from filling the globe with stars.
+Country Coder uses generalized polygons intended for fast client-side lookup. Labels near disputed borders, coastlines, and small islands should therefore be treated as informative rather than authoritative. Champion epicenters intentionally use a separate set of six broad geographic groups, preventing country-level classification from filling the globe with champion markers.
 
 Scientific popup context is loaded only when an individual earthquake popup opens, keeping the main feed fast. The event's USGS GeoJSON detail record is fetched once and cached for later selections. Named faults, plate names, and excerpts are derived only from an inline USGS **Tectonic Summary** product; the app omits these rows when that product is unavailable rather than inferring them from location. Most small or recent events do not include a tectonic summary.
 
@@ -71,7 +71,7 @@ Scientific popup context is loaded only when an individual earthquake popup open
 Open `tests/logic-tests.html` in a browser. The dependency-free test page validates:
 
 - Depth range boundaries
-- Sphere markers across all magnitude values, with champion-star emphasis
+- Sphere markers across all magnitude values, with ringed epicenter emphasis for champions
 - Embedded marker-magnitude formatting
 - Time-range preset fallback
 - Stable earthquake identity used by selected-marker highlighting
