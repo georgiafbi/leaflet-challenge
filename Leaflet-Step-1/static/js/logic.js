@@ -944,16 +944,10 @@ function createSphereImage(color) {
     canvas.height = height;
     var ctx = canvas.getContext("2d");
     var cx = width / 2;
-    var cy = 31;
+    var cy = height / 2;
     var radius = 27;
 
-    // Soft contact shadow makes the sphere appear to rest just above the map.
-    ctx.beginPath();
-    ctx.ellipse(cx, 62, radius * 0.72, 3.5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(2, 6, 23, 0.34)";
-    ctx.fill();
-
-    // Full circular body with off-center lighting for a spherical 3D form.
+    // The sphere is centered on its geographic point so it reads as set into the surface.
     var sphereGrad = ctx.createRadialGradient(cx - 10, cy - 11, 2, cx, cy, radius * 1.08);
     sphereGrad.addColorStop(0, hexChannelMix(color, 255, 0.76));
     sphereGrad.addColorStop(0.3, hexChannelMix(color, 255, 0.2));
@@ -1004,7 +998,7 @@ function createSelectionRingImage() {
     canvas.height = height;
     var ctx = canvas.getContext("2d");
     var cx = width / 2;
-    var cy = 37;
+    var cy = height / 2;
 
     var glow = ctx.createRadialGradient(cx, cy, 27, cx, cy, 39);
     glow.addColorStop(0, "rgba(125, 211, 252, 0)");
@@ -1038,13 +1032,11 @@ function createStarImage(color) {
     canvas.height = height;
     var ctx = canvas.getContext("2d");
     var cx = width / 2;
-    var cy = 43;
+    var cy = height / 2;
     var outerR = 42;
     var innerR = 24;
     var coreR = 23;
     var spikeCount = 12;
-    var extrusionX = 6;
-    var extrusionY = 7;
 
     function getStarPoints(centerX, centerY) {
         var points = [];
@@ -1072,58 +1064,17 @@ function createStarImage(color) {
     }
 
     var topPoints = getStarPoints(cx, cy);
-    var backPoints = getStarPoints(cx + extrusionX, cy + extrusionY);
 
-    // A grounded shadow establishes the star's height above the map.
-    ctx.beginPath();
-    ctx.ellipse(cx + 4, cy + outerR + extrusionY + 2, 31, 5, -0.05, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(2, 6, 23, 0.42)";
-    ctx.fill();
-
-    // The glow sits behind both the face and its extruded body.
-    var glow = ctx.createRadialGradient(cx + 2, cy + 3, outerR * 0.28, cx + 2, cy + 3, outerR * 1.28);
+    // The centered glow and core pin the starburst directly to its geographic point.
+    var glow = ctx.createRadialGradient(cx, cy, outerR * 0.28, cx, cy, outerR * 1.1);
     glow.addColorStop(0, "rgba(255, 215, 90, 0.5)");
     glow.addColorStop(1, "rgba(255, 215, 90, 0)");
     ctx.beginPath();
-    ctx.arc(cx + 2, cy + 3, outerR * 1.25, 0, Math.PI * 2);
+    ctx.arc(cx, cy, outerR * 1.1, 0, Math.PI * 2);
     ctx.fillStyle = glow;
     ctx.fill();
 
-    // The recessed back plate supplies the deepest edge of the extrusion.
-    traceStar(backPoints);
-    var backGrad = ctx.createLinearGradient(cx - outerR, cy, cx + outerR, cy + outerR);
-    backGrad.addColorStop(0, hexChannelMix(color, 0, 0.48));
-    backGrad.addColorStop(1, hexChannelMix(color, 0, 0.76));
-    ctx.fillStyle = backGrad;
-    ctx.fill();
-    ctx.strokeStyle = "rgba(120, 53, 15, 0.92)";
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = "round";
-    ctx.stroke();
-
-    // Each connecting quad is a real side face, with light varying by direction.
-    topPoints.forEach(function (point, index) {
-        var nextIndex = (index + 1) % topPoints.length;
-        var next = topPoints[nextIndex];
-        var backNext = backPoints[nextIndex];
-        var backPoint = backPoints[index];
-        var edgeCenterX = (point.x + next.x) / 2;
-        var darkness = edgeCenterX < cx ? 0.38 : 0.62;
-
-        ctx.beginPath();
-        ctx.moveTo(point.x, point.y);
-        ctx.lineTo(next.x, next.y);
-        ctx.lineTo(backNext.x, backNext.y);
-        ctx.lineTo(backPoint.x, backPoint.y);
-        ctx.closePath();
-        ctx.fillStyle = hexChannelMix(color, 0, darkness);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(180, 83, 9, 0.7)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    });
-
-    // The beveled top face keeps the earthquake's depth color prominent.
+    // The beveled face keeps the depth color prominent without lifting off the globe.
     var bodyGrad = ctx.createRadialGradient(cx - outerR * 0.3, cy - outerR * 0.35, outerR * 0.08, cx, cy, outerR);
     bodyGrad.addColorStop(0, hexChannelMix(color, 255, 0.78));
     bodyGrad.addColorStop(0.42, hexChannelMix(color, 255, 0.12));
@@ -1628,7 +1579,7 @@ function createMap() {
                     6, 1.25,
                     8, 1.7
                 ],
-                "icon-anchor": "bottom",
+                "icon-anchor": "center",
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true
             }
@@ -1651,7 +1602,7 @@ function createMap() {
                         0, 0.45, 2, 0.6, 4, 0.85, 6, 1.25, 8, 1.7
                     ]
                 ],
-                "icon-anchor": "bottom",
+                "icon-anchor": "center",
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
                 "text-field": ["get", "magnitudeLabel"],
@@ -1663,25 +1614,7 @@ function createMap() {
                     6.5, 10.5,
                     8, 12
                 ],
-                "text-offset": [
-                    "interpolate", ["linear"], ["zoom"],
-                    1, [
-                        "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
-                        0, ["literal", [0, -0.79]],
-                        2, ["literal", [0, -0.92]],
-                        4, ["literal", [0, -1.17]],
-                        6, ["literal", [0, -1.54]],
-                        8, ["literal", [0, -1.75]]
-                    ],
-                    5, [
-                        "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
-                        0, ["literal", [0, -1.05]],
-                        2, ["literal", [0, -1.26]],
-                        4, ["literal", [0, -1.61]],
-                        6, ["literal", [0, -2.13]],
-                        8, ["literal", [0, -2.48]]
-                    ]
-                ],
+                "text-offset": [0, 0],
                 "text-anchor": "center",
                 "text-allow-overlap": true,
                 "text-ignore-placement": true,
@@ -1710,7 +1643,7 @@ function createMap() {
                     6, 1.0,
                     8, 1.35
                 ],
-                "icon-anchor": "bottom",
+                "icon-anchor": "center",
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
                 "text-field": ["get", "magnitudeLabel"],
@@ -1722,13 +1655,7 @@ function createMap() {
                     6, 11,
                     8, 12.5
                 ],
-                "text-offset": [
-                    "interpolate", ["linear"], ["coalesce", ["get", "mag"], 0],
-                    0, ["literal", [0, -2.1]],
-                    4, ["literal", [0, -2.4]],
-                    6, ["literal", [0, -2.8]],
-                    8, ["literal", [0, -3.3]]
-                ],
+                "text-offset": [0, 0],
                 "text-anchor": "center",
                 "text-allow-overlap": true,
                 "text-ignore-placement": true,
