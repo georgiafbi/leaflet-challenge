@@ -418,6 +418,82 @@
         assertEqual(document.getElementById("strongest-magnitude").textContent, "-0.6 M", "known negative magnitude should win");
     });
 
+    test("matches search queries by location, region, and type", function () {
+        var event = {
+            properties: {
+                place: "70 km SSW of Tokyo, Japan",
+                country: "Japan",
+                displayRegion: "Japan",
+                championGroup: "Asia",
+                type: "earthquake"
+            }
+        };
+        assertEqual(helpers.matchesSearchQuery(event, ""), true, "empty query matches all");
+        assertEqual(helpers.matchesSearchQuery(event, "tokyo"), true, "city match");
+        assertEqual(helpers.matchesSearchQuery(event, "JAPAN"), true, "case-insensitive country match");
+        assertEqual(helpers.matchesSearchQuery(event, "asia"), true, "champion group match");
+        assertEqual(helpers.matchesSearchQuery(event, "california"), false, "non-matching query");
+    });
+
+    test("filters features by minimum magnitude threshold", function () {
+        assertEqual(helpers.matchesMagnitudeFilter(5.2, 0), true, "all magnitudes pass min 0");
+        assertEqual(helpers.matchesMagnitudeFilter(4.5, 4.5), true, "exact match threshold");
+        assertEqual(helpers.matchesMagnitudeFilter(2.4, 2.5), false, "below threshold");
+        assertEqual(helpers.matchesMagnitudeFilter(null, 4.5), false, "null magnitude fails positive threshold");
+        assertEqual(helpers.matchesMagnitudeFilter(null, 0), true, "null magnitude passes when filter is All");
+    });
+
+    test("filters features across combined depth, magnitude, and search criteria", function () {
+        var features = [
+            { properties: { depthKey: "0-10", mag: 5.5, place: "Fukushima, Japan", time: 100 } },
+            { properties: { depthKey: "10-30", mag: 2.1, place: "Los Angeles, CA", time: 200 } },
+            { properties: { depthKey: "90+", mag: 6.8, place: "Santiago, Chile", time: 300 } }
+        ];
+        var filtered = helpers.getFilteredFeatures(features, {
+            activeDepthRanges: new Set(["0-10", "90+"]),
+            minMagnitude: 5.0,
+            searchQuery: "chile"
+        });
+        assertEqual(filtered.length, 1, "only Chile event should match all 3 criteria");
+        assertEqual(filtered[0].properties.place, "Santiago, Chile", "correct matched feature");
+    });
+
+    test("verifies tectonic plate boundaries GeoJSON dataset structure", function () {
+        assert(window.tectonicPlatesGeoJSON, "plate boundaries dataset exists");
+        assertEqual(window.tectonicPlatesGeoJSON.type, "FeatureCollection", "feature collection type");
+        assert(window.tectonicPlatesGeoJSON.features.length >= 10, "comprehensive plate boundaries present");
+        var firstFeature = window.tectonicPlatesGeoJSON.features[0];
+        assertEqual(firstFeature.type, "Feature", "feature type");
+        assertEqual(firstFeature.geometry.type, "LineString", "linestring geometry");
+        assert(Array.isArray(firstFeature.geometry.coordinates) && firstFeature.geometry.coordinates.length > 2, "coordinate array");
+    });
+
+    test("toggles feed drawer open and closed with synchronized accessibility attributes", function () {
+        var drawer = document.getElementById("feed-drawer");
+        if (!drawer) {
+            drawer = document.createElement("aside");
+            drawer.id = "feed-drawer";
+            drawer.setAttribute("hidden", "");
+            document.body.appendChild(drawer);
+        }
+        var button = document.getElementById("toggle-feed-drawer");
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "toggle-feed-drawer";
+            document.body.appendChild(button);
+        }
+
+        helpers.toggleFeedDrawer(true);
+        assertEqual(drawer.hidden, false, "drawer should be unhidden when opened");
+        assertEqual(drawer.hasAttribute("hidden"), false, "hidden attribute removed");
+        assertEqual(button.getAttribute("aria-expanded"), "true", "button aria-expanded true");
+
+        helpers.toggleFeedDrawer(false);
+        assertEqual(drawer.hidden, true, "drawer should be hidden when closed");
+        assertEqual(drawer.hasAttribute("hidden"), true, "hidden attribute present");
+        assertEqual(button.getAttribute("aria-expanded"), "false", "button aria-expanded false");
+    });
+
     var failed = results.filter(function (result) { return !result.passed; });
     var list = document.getElementById("results");
     results.forEach(function (result) {

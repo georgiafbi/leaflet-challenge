@@ -47,7 +47,9 @@ const depthRangeDefinitions = [
 const baseStyleIds = {
     light: { id: "light-v10", label: "Light Map" },
     dark: { id: "dark-v10", label: "Dark Map" },
-    streets: { id: "streets-v11", label: "Street Map" }
+    streets: { id: "streets-v11", label: "Street Map" },
+    satellite: { id: "satellite-streets-v11", label: "Satellite" },
+    outdoors: { id: "outdoors-v11", label: "Terrain" }
 };
 const mapAttribution = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, Imagery &copy; <a href="https://www.mapbox.com/">Mapbox</a>';
 const compactViewportQuery = window.matchMedia("(max-width: 640px), (max-width: 900px) and (max-height: 500px)");
@@ -65,6 +67,12 @@ let hasSuccessfulFeed = false;
 let globeMap;
 let mapLoaded = false;
 let quakesVisible = true;
+let platesVisible = true;
+let minMagnitude = 0;
+let searchQuery = "";
+let isTimelapsePlaying = false;
+let timelapseTimer = null;
+let timelapseProgress = 0;
 let currentGeojson = { type: "FeatureCollection", features: [] };
 let activeDepthRanges = new Set(depthRangeDefinitions.map(function (range) {
     return range.key;
@@ -656,12 +664,74 @@ function getQuakeIdentity(feature) {
     return null;
 }
 
+function matchesSearchQuery(feature, query) {
+    if (!query || !String(query).trim()) {
+        return true;
+    }
+    var term = String(query).trim().toLowerCase();
+    var props = feature && feature.properties;
+    if (!props) {
+        return false;
+    }
+    var place = (props.place || "").toLowerCase();
+    var country = (props.country || "").toLowerCase();
+    var region = (props.displayRegion || "").toLowerCase();
+    var group = (props.championGroup || "").toLowerCase();
+    var type = (props.type || "").toLowerCase();
+    return place.includes(term) || country.includes(term) || region.includes(term) || group.includes(term) || type.includes(term);
+}
+
+function matchesMagnitudeFilter(magnitude, minMag) {
+    var min = Number(minMag) || 0;
+    if (min <= 0) {
+        return true;
+    }
+    var val = getNumericMagnitude(magnitude);
+    return val !== null && val >= min;
+}
+
+function getFilteredFeatures(features, options) {
+    var depthSet = options && options.activeDepthRanges ? options.activeDepthRanges : activeDepthRanges;
+    var minMag = options && options.minMagnitude !== undefined ? options.minMagnitude : minMagnitude;
+    var query = options && options.searchQuery !== undefined ? options.searchQuery : searchQuery;
+    var timeMax = options && options.timelapseTimeMax !== undefined ? options.timelapseTimeMax : null;
+
+    var list = Array.isArray(features) ? features : (currentGeojson.features || []);
+    return list.filter(function (feature) {
+        if (!feature || !feature.properties) {
+            return false;
+        }
+        var props = feature.properties;
+        if (!depthSet.has(props.depthKey)) {
+            return false;
+        }
+        if (!matchesMagnitudeFilter(props.mag, minMag)) {
+            return false;
+        }
+        if (!matchesSearchQuery(feature, query)) {
+            return false;
+        }
+        if (timeMax !== null && props.time > timeMax) {
+            return false;
+        }
+        return true;
+    });
+}
+
 function getVisibleGeojson() {
+    var timeMax = null;
+    if (isTimelapsePlaying) {
+        var sorted = currentGeojson.features.slice().sort(function (a, b) { return a.properties.time - b.properties.time; });
+        if (sorted.length) {
+            var minT = sorted[0].properties.time;
+            var maxT = sorted[sorted.length - 1].properties.time;
+            timeMax = minT + ((maxT - minT) * (timelapseProgress / 100));
+        }
+    }
+
     return {
         type: "FeatureCollection",
-        features: currentGeojson.features.filter(function (feature) {
-            return activeDepthRanges.has(feature.properties.depthKey);
-        })
+        features: getFilteredFeatures(currentGeojson.features, { timelapseTimeMax: timeMax })
     };
 }
 
@@ -1363,16 +1433,52 @@ function toggleDepthRange(rangeKey) {
     });
 }
 
+function setTectonicPlatesVisibility(visible) {
+    platesVisible = Boolean(visible);
+    if (globeMap) {
+        ["plate-boundaries-glow", "plate-boundaries-line"].forEach(function (layerId) {
+            if (globeMap.getLayer(layerId)) {
+                globeMap.setLayoutProperty(layerId, "visibility", platesVisible ? "visible" : "none");
+            }
+        });
+    }
+    var input = document.getElementById("plates-visibility");
+    if (input) {
+        input.checked = platesVisible;
+    }
+}
+
 function resetMapFilters() {
     activeDepthRanges = new Set(depthRangeDefinitions.map(function (range) {
         return range.key;
     }));
     quakesVisible = true;
+    platesVisible = true;
+    minMagnitude = 0;
+    searchQuery = "";
 
+    var searchInput = document.getElementById("quake-search");
+    if (searchInput) {
+        searchInput.value = "";
+    }
+    var clearSearchBtn = document.getElementById("clear-search");
+    if (clearSearchBtn) {
+        clearSearchBtn.hidden = true;
+    }
+    document.querySelectorAll(".mag-filter-chip").forEach(function (chip) {
+        var isActive = chip.dataset.mag === "0";
+        chip.classList.toggle("is-active", isActive);
+        chip.setAttribute("aria-pressed", String(isActive));
+    });
     var quakeInput = document.getElementById("quake-visibility");
     if (quakeInput) {
         quakeInput.checked = true;
     }
+    var platesInput = document.getElementById("plates-visibility");
+    if (platesInput) {
+        platesInput.checked = true;
+    }
+    setTectonicPlatesVisibility(true);
     document.querySelectorAll(".legend-toggle").forEach(function (button) {
         button.classList.remove("is-off");
         button.setAttribute("aria-pressed", "true");
@@ -1382,12 +1488,177 @@ function resetMapFilters() {
         }
     });
     applyDepthFilters();
+    renderFeedDrawer();
 }
 
 function setMapPanelExpanded(panel, button, content, expanded) {
     panel.classList.toggle("is-expanded", expanded);
     button.setAttribute("aria-expanded", String(expanded));
     content.hidden = !expanded;
+}
+
+function toggleFeedDrawer(show) {
+    var drawer = document.getElementById("feed-drawer");
+    var button = document.getElementById("toggle-feed-drawer");
+    if (!drawer) return;
+    var isCurrentlyHidden = drawer.hasAttribute("hidden") || drawer.hidden;
+    var willOpen = show !== undefined ? Boolean(show) : isCurrentlyHidden;
+    if (willOpen) {
+        drawer.removeAttribute("hidden");
+        drawer.hidden = false;
+    } else {
+        drawer.setAttribute("hidden", "");
+        drawer.hidden = true;
+    }
+    if (button) {
+        button.classList.toggle("is-active", willOpen);
+        button.setAttribute("aria-expanded", String(willOpen));
+    }
+    if (willOpen) {
+        renderFeedDrawer();
+    }
+}
+
+function renderFeedDrawer() {
+    var listEl = document.getElementById("feed-drawer-list");
+    var countEl = document.getElementById("feed-drawer-count");
+    if (!listEl) return;
+
+    var visibleQuakes = getVisibleGeojson().features.slice().sort(function (a, b) {
+        var magB = getNumericMagnitude(b.properties.mag);
+        var magA = getNumericMagnitude(a.properties.mag);
+        if (magB !== magA) {
+            return (magB !== null ? magB : -99) < (magA !== null ? magA : -99) ? 1 : -1;
+        }
+        return b.properties.time - a.properties.time;
+    });
+
+    if (countEl) {
+        countEl.textContent = visibleQuakes.length + " matching";
+    }
+
+    listEl.innerHTML = "";
+    if (!visibleQuakes.length) {
+        var emptyP = document.createElement("p");
+        emptyP.className = "feed-drawer-empty";
+        emptyP.textContent = "No earthquakes match current filters.";
+        listEl.appendChild(emptyP);
+        return;
+    }
+
+    var topQuakes = visibleQuakes.slice(0, 50);
+    topQuakes.forEach(function (quake) {
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "feed-drawer-item";
+        item.setAttribute("aria-label", (quake.properties.place || "Earthquake") + ", Magnitude " + formatMagnitudeLabel(quake.properties.mag));
+
+        var magBadge = document.createElement("span");
+        magBadge.className = "feed-drawer-mag";
+        var depthRange = depthRangeDefinitions.find(function (r) { return r.key === quake.properties.depthKey; }) || depthRangeDefinitions[0];
+        magBadge.style.backgroundColor = depthRange.color;
+        magBadge.textContent = formatMagnitudeLabel(quake.properties.mag);
+
+        var info = document.createElement("div");
+        info.className = "feed-drawer-info";
+
+        var place = document.createElement("span");
+        place.className = "feed-drawer-place";
+        place.textContent = quake.properties.place || "Unknown location";
+
+        var meta = document.createElement("span");
+        meta.className = "feed-drawer-meta";
+        meta.textContent = formatRelativeTime(quake.properties.time) + " · " + quake.properties.depth + " km";
+
+        info.appendChild(place);
+        info.appendChild(meta);
+        item.appendChild(magBadge);
+        item.appendChild(info);
+
+        item.addEventListener("click", function () {
+            flyToQuake(quake);
+            if (compactViewportQuery.matches) {
+                toggleFeedDrawer(false);
+            }
+        });
+
+        listEl.appendChild(item);
+    });
+}
+
+function updateTimelapseControls() {
+    var playBtn = document.getElementById("timelapse-play-pause");
+    var toggleBtn = document.getElementById("toggle-timelapse");
+    var labelEl = document.getElementById("timelapse-btn-label");
+    if (playBtn) {
+        playBtn.textContent = isTimelapsePlaying ? "❚❚" : "▶";
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.toggle("is-active", isTimelapsePlaying);
+        toggleBtn.setAttribute("aria-pressed", String(isTimelapsePlaying));
+    }
+    if (labelEl) {
+        labelEl.textContent = isTimelapsePlaying ? "Pause Timelapse" : "Timelapse";
+    }
+}
+
+function startTimelapse() {
+    if (!currentGeojson.features.length) return;
+    var bar = document.getElementById("timelapse-bar");
+    if (bar) bar.hidden = false;
+    isTimelapsePlaying = true;
+    if (timelapseProgress >= 100) {
+        timelapseProgress = 0;
+    }
+    updateTimelapseControls();
+
+    var sorted = currentGeojson.features.slice().sort(function (a, b) { return a.properties.time - b.properties.time; });
+    var minTime = sorted[0].properties.time;
+    var maxTime = sorted[sorted.length - 1].properties.time;
+    var totalDuration = Math.max(maxTime - minTime, 1);
+
+    function step() {
+        if (!isTimelapsePlaying) return;
+        timelapseProgress += 0.8;
+        if (timelapseProgress >= 100) {
+            timelapseProgress = 100;
+            pauseTimelapse();
+        }
+        var rangeInput = document.getElementById("timelapse-range");
+        if (rangeInput) {
+            rangeInput.value = timelapseProgress;
+        }
+        var currentCutoff = minTime + (totalDuration * (timelapseProgress / 100));
+        var labelEl = document.getElementById("timelapse-time-label");
+        if (labelEl) {
+            labelEl.textContent = new Date(currentCutoff).toLocaleString() + " (" + Math.round(timelapseProgress) + "%)";
+        }
+        refreshEarthquakeSource();
+        renderFeedDrawer();
+        if (isTimelapsePlaying && timelapseProgress < 100) {
+            timelapseTimer = window.setTimeout(step, 60);
+        }
+    }
+    step();
+}
+
+function pauseTimelapse() {
+    isTimelapsePlaying = false;
+    window.clearTimeout(timelapseTimer);
+    updateTimelapseControls();
+    refreshEarthquakeSource();
+}
+
+function stopTimelapse() {
+    pauseTimelapse();
+    timelapseProgress = 100;
+    var bar = document.getElementById("timelapse-bar");
+    if (bar) bar.hidden = true;
+    var rangeInput = document.getElementById("timelapse-range");
+    if (rangeInput) rangeInput.value = 100;
+    updateTimelapseControls();
+    refreshEarthquakeSource();
+    renderFeedDrawer();
 }
 
 function buildMapPanels() {
@@ -1467,6 +1738,25 @@ function buildMapPanels() {
     quakeToggle.appendChild(quakeInput);
     quakeToggle.appendChild(quakeText);
     baseContent.appendChild(quakeToggle);
+
+    var platesToggle = document.createElement("label");
+    platesToggle.className = "base-option";
+    var platesInput = document.createElement("input");
+    platesInput.type = "checkbox";
+    platesInput.id = "plates-visibility";
+    platesInput.checked = platesVisible;
+    platesInput.addEventListener("change", function (event) {
+        setTectonicPlatesVisibility(event.target.checked);
+        if (compactViewportQuery.matches) {
+            setMapPanelExpanded(basePanel, baseHeader, baseContent, false);
+            baseHeader.focus();
+        }
+    });
+    var platesText = document.createElement("span");
+    platesText.textContent = "Tectonic Plates";
+    platesToggle.appendChild(platesInput);
+    platesToggle.appendChild(platesText);
+    baseContent.appendChild(platesToggle);
     basePanel.appendChild(baseContent);
 
     baseHeader.addEventListener("click", function () {
@@ -1527,6 +1817,11 @@ function buildMapPanels() {
     magnitudeLegend.className = "magnitude-legend";
     magnitudeLegend.innerHTML = '<p class="legend-subtitle">Magnitude · label &amp; size</p><div class="magnitude-scale"><span class="magnitude-item"><i class="magnitude-shape is-sphere"></i><span class="legend-desktop-copy">Sphere marker<br><small>Number = magnitude</small></span><span class="legend-mobile-copy">Magnitude</span></span></div>';
     content.appendChild(magnitudeLegend);
+
+    var platesNote = document.createElement("p");
+    platesNote.className = "legend-note";
+    platesNote.innerHTML = '<span style="display:inline-block;width:18px;height:3px;background:#fbbf24;box-shadow:0 0 6px #f59e0b;border-radius:2px;margin-right:6px;" aria-hidden="true"></span><span class="legend-desktop-copy">Tectonic plate boundaries (PB2002)</span><span class="legend-mobile-copy">Plates</span>';
+    content.appendChild(platesNote);
 
     var championNote = document.createElement("p");
     championNote.className = "legend-note";
@@ -1678,6 +1973,72 @@ function createMap() {
             clusterMaxZoom: 3,
             clusterRadius: 48
         });
+
+        if (window.tectonicPlatesGeoJSON) {
+            globeMap.addSource("tectonic-plates", {
+                type: "geojson",
+                data: window.tectonicPlatesGeoJSON
+            });
+
+            globeMap.addLayer({
+                id: "plate-boundaries-glow",
+                type: "line",
+                source: "tectonic-plates",
+                layout: {
+                    "line-cap": "round",
+                    "line-join": "round",
+                    "visibility": platesVisible ? "visible" : "none"
+                },
+                paint: {
+                    "line-color": "#f59e0b",
+                    "line-width": 5,
+                    "line-opacity": 0.45,
+                    "line-blur": 2
+                }
+            });
+
+            globeMap.addLayer({
+                id: "plate-boundaries-line",
+                type: "line",
+                source: "tectonic-plates",
+                layout: {
+                    "line-cap": "round",
+                    "line-join": "round",
+                    "visibility": platesVisible ? "visible" : "none"
+                },
+                paint: {
+                    "line-color": "#fbbf24",
+                    "line-width": 1.75,
+                    "line-opacity": 0.85,
+                    "line-dasharray": [3, 2]
+                }
+            });
+
+            globeMap.on("click", "plate-boundaries-line", function (event) {
+                var feature = event.features && event.features[0];
+                if (!feature || !feature.properties) return;
+                var props = feature.properties;
+                var popupContent = document.createElement("div");
+                popupContent.className = "quake-popup";
+                var title = document.createElement("h3");
+                title.textContent = props.name || "Tectonic Plate Boundary";
+                popupContent.appendChild(title);
+                if (props.type) appendPopupRow(popupContent, "Boundary type", props.type);
+                if (props.plates) appendPopupRow(popupContent, "Plates", props.plates, true);
+
+                new maplibregl.Popup({ maxWidth: "300px" })
+                    .setLngLat(event.lngLat)
+                    .setDOMContent(popupContent)
+                    .addTo(globeMap);
+            });
+
+            globeMap.on("mouseenter", "plate-boundaries-line", function () {
+                globeMap.getCanvas().style.cursor = "pointer";
+            });
+            globeMap.on("mouseleave", "plate-boundaries-line", function () {
+                globeMap.getCanvas().style.cursor = "";
+            });
+        }
 
         depthRangeDefinitions.forEach(function (range) {
             globeMap.addImage("sphere-" + range.key, createSphereImage(range.color), { pixelRatio: 2 });
@@ -2054,6 +2415,7 @@ function loadEarthquakeData(rangeKey) {
             lastSuccessfulRange = preset.key;
             hasSuccessfulFeed = true;
             updateSummary(currentGeojson);
+            renderFeedDrawer();
             setPillState("live", preset.label);
 
             if (mapLoaded && globeMap.getSource("earthquakes")) {
@@ -2138,7 +2500,16 @@ window.earthquakeApp.test = {
     setActiveQuakePopup: setActiveQuakePopup,
     setMapPanelExpanded: setMapPanelExpanded,
     transitionChampionPingMotion: transitionChampionPingMotion,
-    updateSummary: updateSummary
+    updateSummary: updateSummary,
+    matchesSearchQuery: matchesSearchQuery,
+    matchesMagnitudeFilter: matchesMagnitudeFilter,
+    getFilteredFeatures: getFilteredFeatures,
+    setTectonicPlatesVisibility: setTectonicPlatesVisibility,
+    toggleFeedDrawer: toggleFeedDrawer,
+    renderFeedDrawer: renderFeedDrawer,
+    startTimelapse: startTimelapse,
+    pauseTimelapse: pauseTimelapse,
+    stopTimelapse: stopTimelapse
 };
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -2173,6 +2544,103 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     updateRangeControls(currentRange);
 
+    // Search bar event wiring
+    var searchInput = document.getElementById("quake-search");
+    var clearSearchBtn = document.getElementById("clear-search");
+    if (searchInput) {
+        searchInput.addEventListener("input", function (event) {
+            searchQuery = event.target.value;
+            if (clearSearchBtn) {
+                clearSearchBtn.hidden = !searchQuery;
+            }
+            refreshEarthquakeSource();
+            renderFeedDrawer();
+            updateSummary(getVisibleGeojson());
+        });
+        searchInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                var matches = getVisibleGeojson().features;
+                if (matches.length) {
+                    flyToQuake(matches[0]);
+                }
+            }
+        });
+    }
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener("click", function () {
+            searchQuery = "";
+            if (searchInput) searchInput.value = "";
+            clearSearchBtn.hidden = true;
+            refreshEarthquakeSource();
+            renderFeedDrawer();
+            updateSummary(getVisibleGeojson());
+        });
+    }
+
+    // Magnitude filter chips
+    document.querySelectorAll(".mag-filter-chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+            minMagnitude = Number(chip.dataset.mag) || 0;
+            document.querySelectorAll(".mag-filter-chip").forEach(function (c) {
+                var isActive = c === chip;
+                c.classList.toggle("is-active", isActive);
+                c.setAttribute("aria-pressed", String(isActive));
+            });
+            refreshEarthquakeSource();
+            renderFeedDrawer();
+            updateSummary(getVisibleGeojson());
+        });
+    });
+
+    // Activity Feed drawer toggle buttons
+    var toggleFeedBtn = document.getElementById("toggle-feed-drawer");
+    if (toggleFeedBtn) {
+        toggleFeedBtn.addEventListener("click", function () {
+            toggleFeedDrawer();
+        });
+    }
+    var closeFeedBtn = document.getElementById("close-feed-drawer");
+    if (closeFeedBtn) {
+        closeFeedBtn.addEventListener("click", function () {
+            toggleFeedDrawer(false);
+        });
+    }
+
+    // Timelapse controls
+    var toggleTimelapseBtn = document.getElementById("toggle-timelapse");
+    if (toggleTimelapseBtn) {
+        toggleTimelapseBtn.addEventListener("click", function () {
+            if (isTimelapsePlaying) {
+                stopTimelapse();
+            } else {
+                startTimelapse();
+            }
+        });
+    }
+    var playPauseBtn = document.getElementById("timelapse-play-pause");
+    if (playPauseBtn) {
+        playPauseBtn.addEventListener("click", function () {
+            if (isTimelapsePlaying) {
+                pauseTimelapse();
+            } else {
+                startTimelapse();
+            }
+        });
+    }
+    var stopBtn = document.getElementById("timelapse-stop");
+    if (stopBtn) {
+        stopBtn.addEventListener("click", stopTimelapse);
+    }
+    var timelapseRange = document.getElementById("timelapse-range");
+    if (timelapseRange) {
+        timelapseRange.addEventListener("input", function (event) {
+            timelapseProgress = Number(event.target.value) || 0;
+            if (isTimelapsePlaying) pauseTimelapse();
+            refreshEarthquakeSource();
+            renderFeedDrawer();
+        });
+    }
+
     wireStatCard("total-events", "Reset globe view", resetGlobeView);
     wireStatCard("strongest-magnitude", "Fly to the strongest quake", function () {
         flyToQuake(highlightQuakes.strongest);
@@ -2182,6 +2650,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     wireStatCard("latest-event", "Fly to the latest quake", function () {
         flyToQuake(highlightQuakes.latest);
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            var drawer = document.getElementById("feed-drawer");
+            if (drawer && !drawer.hidden) {
+                toggleFeedDrawer(false);
+            }
+        }
     });
 
     loadEarthquakeData(currentRange);

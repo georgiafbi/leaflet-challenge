@@ -5,21 +5,23 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 ## Features
 
 - Quick time-range presets for 1 hour, 24 hours, 7 days, and 30 days, plus all intermediate ranges
+- Real-time location & country search with instant fly-to and match count
+- Minimum magnitude filters (`All`, `2.5+`, `4.5+`, `6.0+`, `7.0+`)
+- Toggleable **Tectonic Plate Boundaries** overlay layer (PB2002 dataset) with glowing fault lines and boundary details
+- Interactive **Recent Activity Feed List** drawer with live filter reflection and one-click navigation
+- Interactive **Seismic Timelapse Playback** mode with timeline scrubber and time indicators
+- Light, dark, street, **satellite**, and **terrain / outdoors** basemaps
 - Paginated USGS requests, including ranges with more than 20,000 events
-- One-decimal magnitude labels embedded in 3D sphere markers at a glance; marker size increases with magnitude and color continues to represent depth
+- One-decimal magnitude labels embedded in 3D sphere markers at a glance; marker size increases with magnitude and color represents depth
 - Low-zoom clustering that reduces overlap and expands into individual events when selected
-- Summary cards for total, strongest, deepest, and latest events
-- Clickable summary cards that navigate to notable earthquakes
-- Light, dark, and street basemaps
-- Toggleable earthquake and depth layers with a one-click filter reset
+- Summary cards for total, strongest, deepest, and latest events with instant fly-to
 - Phone-first layout with compact 2×2 stats, collapsible Layers control, and a safe-area-aware legend sheet
 - Default-open, collapsible map legend and persistent selected-event highlighting
 - Country or offshore-area labels in earthquake details
-- Lazy USGS popup enrichment with named faults, tectonic plates, and concise tectonic context when authoritative detail metadata is available
-- Broad geographic-group champions marked with ringed epicenter symbols and staggered, depth-colored seismic pings around glossy cores
-- Depth-colored seismic pings also identify the current strongest, deepest, and latest earthquakes
+- Lazy USGS popup enrichment with named faults, tectonic plates, and concise tectonic context
+- Broad geographic-group champions marked with ringed epicenter symbols and staggered, depth-colored seismic pings
 - Keyboard-accessible controls and reduced-motion support
-- Responsive layouts for desktop and mobile screens
+- Responsive layouts for desktop, tablet, and mobile screens
 
 ## Technology
 
