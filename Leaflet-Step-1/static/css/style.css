@@ -594,37 +594,6 @@ body {
   outline: none;
 }
 
-.legend-spin-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.35);
-  color: #cbd5e1;
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.18s ease;
-}
-
-.legend-spin-btn:hover,
-.legend-spin-btn:focus-visible {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: #38bdf8;
-  color: #e0f2fe;
-  outline: none;
-}
-
-.legend-spin-btn.is-active {
-  background: rgba(14, 165, 233, 0.28);
-  border-color: #38bdf8;
-  color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
-}
-
 .magnitude-shape.is-sphere {
   width: 14px;
   height: 14px;

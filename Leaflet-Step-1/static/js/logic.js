@@ -1861,19 +1861,6 @@ function buildMapPanels() {
     resetButton.addEventListener("click", resetMapFilters);
     extraNotes.appendChild(resetButton);
 
-    var spinButton = document.createElement("button");
-    spinButton.type = "button";
-    spinButton.className = "legend-spin-btn";
-    spinButton.id = "legend-spin-toggle";
-    spinButton.title = "Toggle continuous 3D globe auto-rotation";
-    spinButton.innerHTML = '<span class="legend-spin-icon" aria-hidden="true">🌍</span><span class="legend-badge-text">Spin</span>';
-    spinButton.addEventListener("click", function () {
-        setAutoRotate(!autoRotate);
-        spinButton.classList.toggle("is-active", autoRotate);
-        spinButton.setAttribute("aria-pressed", String(autoRotate));
-    });
-    extraNotes.appendChild(spinButton);
-
     content.appendChild(extraNotes);
 
     legendPanel.appendChild(content);
