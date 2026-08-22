@@ -462,6 +462,13 @@ body {
   flex: 0 0 auto;
 }
 
+.legend-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .legend-toggle {
   width: auto;
   display: flex;
@@ -925,34 +932,38 @@ body {
     max-width: none;
     max-height: none;
     overflow: hidden;
-    border-radius: 16px;
-    padding: 0 8px;
+    border-radius: 14px;
+    padding: 6px 8px;
     background: rgba(15, 23, 42, 0.96);
-    box-shadow: 0 -10px 30px rgba(2, 6, 23, 0.34);
+    box-shadow: 0 -6px 20px rgba(2, 6, 23, 0.4);
   }
 
   .legend-panel.is-expanded {
     display: block;
     overflow: visible;
-    padding-bottom: max(7px, env(safe-area-inset-bottom));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
 
   .legend-header {
     width: 100%;
-    min-height: 44px;
-    padding: 0;
+    min-height: 38px;
+    padding: 0 2px 6px;
     border-right: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
   }
 
   .legend-panel.is-expanded .legend-header {
     position: static;
     width: 100%;
-    min-height: 44px;
+    min-height: 38px;
     justify-content: space-between;
-    padding: 0;
+    padding: 0 2px 6px;
     border: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 0;
     background: transparent;
   }
@@ -971,11 +982,10 @@ body {
     width: 100%;
     max-height: none;
     margin-top: 0;
-    padding: 7px 0 0;
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-template-rows: repeat(2, 44px);
-    gap: 5px 4px;
+    padding: 6px 0 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     overflow: visible;
   }
 
@@ -991,58 +1001,87 @@ body {
     display: inline;
   }
 
+  /* Row 1: All 6 Depth Toggles in a clean 6-column grid */
   .legend-list {
-    display: contents;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+    width: 100%;
   }
 
   .legend-toggle {
-    grid-column: span 2;
     width: 100%;
     min-width: 0;
-    min-height: 44px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
     justify-content: center;
     gap: 3px;
-    padding: 3px 2px;
-    font-size: clamp(0.52rem, 2.35vw, 0.62rem);
+    padding: 2px;
+    font-size: clamp(0.55rem, 2.25vw, 0.68rem);
+    font-weight: 700;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.45);
+    color: #e2e8f0;
+    box-sizing: border-box;
+    white-space: nowrap;
   }
 
-  .legend-label {
-    flex: 0 1 auto;
+  .legend-toggle .legend-swatch {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+  }
+
+  .legend-toggle .legend-label {
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .legend-swatch {
-    width: 9px;
-    height: 9px;
+  /* Row 2: Supporting notes and reset button in horizontal scroll row */
+  .legend-extra {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+
+  .legend-extra::-webkit-scrollbar {
+    display: none;
   }
 
   .magnitude-legend,
   .legend-note,
   .legend-reset {
-    grid-column: span 3;
-    width: 100%;
+    flex: 1 0 auto;
     min-width: 0;
-    min-height: 44px;
+    min-height: 34px;
     margin: 0;
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 3px;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    padding: 2px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 8px;
     background: rgba(15, 23, 42, 0.38);
     color: #e2e8f0;
-    font-size: clamp(0.52rem, 2.35vw, 0.62rem);
+    font-size: clamp(0.55rem, 2.25vw, 0.68rem);
+    font-weight: 600;
     line-height: 1;
     text-align: center;
+    white-space: nowrap;
   }
 
   .magnitude-legend {
-    border-left: 1px solid rgba(148, 163, 184, 0.28);
-  }
-
-  .magnitude-legend .legend-subtitle {
-    display: none;
+    border-left: 1px solid rgba(148, 163, 184, 0.25);
   }
 
   .magnitude-scale,
@@ -1051,38 +1090,30 @@ body {
   }
 
   .magnitude-legend .magnitude-shape.is-sphere {
-    width: 16px;
-    height: 16px;
-  }
-
-  .legend-note {
-    max-width: none;
+    width: 15px;
+    height: 15px;
   }
 
   .champion-epicenter-badge {
-    width: 23px;
+    width: 22px;
   }
 
   .cluster-legend-icon {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
     border: 1px solid rgba(255, 255, 255, 0.9);
     border-radius: 50%;
     background: rgba(37, 99, 235, 0.9);
     color: #fff;
     font-size: 0.54rem;
     font-weight: 800;
-    line-height: 19px;
+    line-height: 18px;
     text-align: center;
     flex: 0 0 auto;
   }
 
-  .legend-reset {
-    padding-inline: 3px;
-  }
-
   .legend-reset-icon {
-    font-size: 1rem;
+    font-size: 0.9rem;
     line-height: 1;
   }
 
@@ -1755,41 +1786,6 @@ body {
 
   .feed-drawer[hidden] {
     display: none !important;
-  }
-
-  .legend-panel {
-    margin-top: 6px;
-    padding: 6px 8px;
-  }
-
-  .legend-content {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-
-  .legend-content::-webkit-scrollbar {
-    display: none;
-  }
-
-  .legend-toggle {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 0 8px;
-    font-size: 0.66rem;
-  }
-
-  .magnitude-legend,
-  .legend-note,
-  .legend-reset {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 0 8px;
-    font-size: 0.66rem;
   }
 }
 

@@ -1813,15 +1813,18 @@ function buildMapPanels() {
 
     content.appendChild(list);
 
+    var extraNotes = document.createElement("div");
+    extraNotes.className = "legend-extra";
+
     var magnitudeLegend = document.createElement("div");
     magnitudeLegend.className = "magnitude-legend";
     magnitudeLegend.innerHTML = '<p class="legend-subtitle">Magnitude · label &amp; size</p><div class="magnitude-scale"><span class="magnitude-item"><i class="magnitude-shape is-sphere"></i><span class="legend-desktop-copy">Sphere marker<br><small>Number = magnitude</small></span><span class="legend-mobile-copy">Magnitude</span></span></div>';
-    content.appendChild(magnitudeLegend);
+    extraNotes.appendChild(magnitudeLegend);
 
     var platesNote = document.createElement("p");
     platesNote.className = "legend-note";
     platesNote.innerHTML = '<span style="display:inline-block;width:18px;height:3px;background:#fbbf24;box-shadow:0 0 6px #f59e0b;border-radius:2px;margin-right:6px;" aria-hidden="true"></span><span class="legend-desktop-copy">Tectonic plate boundaries (PB2002)</span><span class="legend-mobile-copy">Plates</span>';
-    content.appendChild(platesNote);
+    extraNotes.appendChild(platesNote);
 
     var championNote = document.createElement("p");
     championNote.className = "legend-note";
@@ -1834,19 +1837,21 @@ function buildMapPanels() {
     championMobileCopy.textContent = "Champion";
     championNote.appendChild(championDesktopCopy);
     championNote.appendChild(championMobileCopy);
-    content.appendChild(championNote);
+    extraNotes.appendChild(championNote);
 
     var clusterNote = document.createElement("p");
     clusterNote.className = "legend-note";
     clusterNote.innerHTML = '<span class="cluster-legend-icon" aria-hidden="true">12</span><span class="legend-desktop-copy">Numbered circles group nearby events; select one to zoom in</span><span class="legend-mobile-copy">Clusters</span>';
-    content.appendChild(clusterNote);
+    extraNotes.appendChild(clusterNote);
 
     var resetButton = document.createElement("button");
     resetButton.type = "button";
     resetButton.className = "legend-reset";
     resetButton.innerHTML = '<span class="legend-reset-icon" aria-hidden="true">↺</span><span class="legend-desktop-copy">Reset map filters</span><span class="legend-mobile-copy">Reset</span>';
     resetButton.addEventListener("click", resetMapFilters);
-    content.appendChild(resetButton);
+    extraNotes.appendChild(resetButton);
+
+    content.appendChild(extraNotes);
 
     legendPanel.appendChild(content);
 
