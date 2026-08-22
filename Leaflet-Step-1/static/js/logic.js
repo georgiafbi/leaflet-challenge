@@ -828,7 +828,8 @@ function startAutoRotate() {
             return;
         }
         var center = globeMap.getCenter();
-        center.lng += 0.42;
+        var step = compactViewportQuery.matches ? 0.18 : 0.09;
+        center.lng += step;
         globeMap.jumpTo({ center: center });
         rotationAnimationId = requestAnimationFrame(spin);
     }
