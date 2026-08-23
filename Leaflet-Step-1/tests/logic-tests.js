@@ -556,6 +556,39 @@
         }
     });
 
+    test("toggles quick guide modal open and closed with accessibility attributes", function () {
+        var backdrop = document.getElementById("guide-modal-backdrop");
+        if (!backdrop) {
+            backdrop = document.createElement("div");
+            backdrop.id = "guide-modal-backdrop";
+            backdrop.setAttribute("hidden", "");
+            document.body.appendChild(backdrop);
+        }
+        var modal = document.getElementById("guide-modal");
+        if (!modal) {
+            modal = document.createElement("div");
+            modal.id = "guide-modal";
+            modal.tabIndex = -1;
+            backdrop.appendChild(modal);
+        }
+        var button = document.getElementById("open-guide-modal");
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "open-guide-modal";
+            document.body.appendChild(button);
+        }
+
+        helpers.openGuideModal();
+        assertEqual(backdrop.hidden, false, "guide backdrop unhidden when opened");
+        assertEqual(backdrop.hasAttribute("hidden"), false, "guide hidden attribute removed");
+        assertEqual(button.getAttribute("aria-expanded"), "true", "guide button aria-expanded true");
+
+        helpers.closeGuideModal();
+        assertEqual(backdrop.hidden, true, "guide backdrop hidden when closed");
+        assertEqual(backdrop.hasAttribute("hidden"), true, "guide hidden attribute set");
+        assertEqual(button.getAttribute("aria-expanded"), "false", "guide button aria-expanded false");
+    });
+
     var failed = results.filter(function (result) { return !result.passed; });
     var list = document.getElementById("results");
     results.forEach(function (result) {

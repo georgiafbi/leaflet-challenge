@@ -3419,6 +3419,42 @@ function setMapPanelExpanded(panel, button, content, expanded) {
     content.hidden = !expanded;
 }
 
+var lastFocusedElementBeforeGuide = null;
+
+function openGuideModal() {
+    var backdrop = document.getElementById("guide-modal-backdrop");
+    var modal = document.getElementById("guide-modal");
+    var openBtn = document.getElementById("open-guide-modal");
+    if (!backdrop) return;
+
+    lastFocusedElementBeforeGuide = document.activeElement;
+    backdrop.removeAttribute("hidden");
+    backdrop.hidden = false;
+    if (openBtn) {
+        openBtn.setAttribute("aria-expanded", "true");
+    }
+    if (modal) {
+        modal.focus();
+    }
+}
+
+function closeGuideModal() {
+    var backdrop = document.getElementById("guide-modal-backdrop");
+    var openBtn = document.getElementById("open-guide-modal");
+    if (!backdrop) return;
+
+    backdrop.setAttribute("hidden", "");
+    backdrop.hidden = true;
+    if (openBtn) {
+        openBtn.setAttribute("aria-expanded", "false");
+    }
+    if (lastFocusedElementBeforeGuide && typeof lastFocusedElementBeforeGuide.focus === "function") {
+        lastFocusedElementBeforeGuide.focus();
+    } else if (openBtn) {
+        openBtn.focus();
+    }
+}
+
 function toggleFeedDrawer(show) {
     var drawer = document.getElementById("feed-drawer");
     var button = document.getElementById("toggle-feed-drawer");
@@ -4555,7 +4591,9 @@ window.earthquakeApp.test = {
     renderFeedDrawer: renderFeedDrawer,
     startTimelapse: startTimelapse,
     pauseTimelapse: pauseTimelapse,
-    stopTimelapse: stopTimelapse
+    stopTimelapse: stopTimelapse,
+    openGuideModal: openGuideModal,
+    closeGuideModal: closeGuideModal
 };
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -4774,13 +4812,37 @@ document.addEventListener("DOMContentLoaded", function () {
         airshipWhistleBtn.addEventListener("click", soundSteamWhistle);
     }
 
+    // Guide Modal Wiring
+    var openGuideBtn = document.getElementById("open-guide-modal");
+    var closeGuideBtn = document.getElementById("close-guide-modal");
+    var doneGuideBtn = document.getElementById("guide-modal-done-btn");
+    var guideBackdrop = document.getElementById("guide-modal-backdrop");
+
+    if (openGuideBtn) {
+        openGuideBtn.addEventListener("click", openGuideModal);
+    }
+    if (closeGuideBtn) {
+        closeGuideBtn.addEventListener("click", closeGuideModal);
+    }
+    if (doneGuideBtn) {
+        doneGuideBtn.addEventListener("click", closeGuideModal);
+    }
+    if (guideBackdrop) {
+        guideBackdrop.addEventListener("click", function (event) {
+            if (event.target === guideBackdrop) {
+                closeGuideModal();
+            }
+        });
+    }
+
     document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape") {
+        if (event.key === "Escape" || event.key === "Esc") {
             var drawer = document.getElementById("feed-drawer");
             if (drawer && !drawer.hidden) {
                 toggleFeedDrawer(false);
             }
             closeAirshipDrawer();
+            closeGuideModal();
         }
     });
 
