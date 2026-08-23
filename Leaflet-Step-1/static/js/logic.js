@@ -4347,124 +4347,154 @@ function createMap() {
             });
         });
 
-        // Register custom airship canvas images for each ship
-        [0, 1, 2].forEach(function (idx) {
-            var imgId = "victorian-airship-" + idx;
-            if (!globeMap.hasImage(imgId)) {
-                globeMap.addImage(imgId, createAirshipImage(idx), { pixelRatio: 2 });
+        try {
+            // Register custom airship canvas images for each ship
+            [0, 1, 2].forEach(function (idx) {
+                var imgId = "victorian-airship-" + idx;
+                if (!globeMap.hasImage(imgId)) {
+                    globeMap.addImage(imgId, createAirshipImage(idx), { pixelRatio: 2 });
+                }
+            });
+            if (!globeMap.hasImage("victorian-airship")) {
+                globeMap.addImage("victorian-airship", createAirshipImage(0), { pixelRatio: 2 });
             }
-        });
-        if (!globeMap.hasImage("victorian-airship")) {
-            globeMap.addImage("victorian-airship", createAirshipImage(0), { pixelRatio: 2 });
+
+            // Add Airship Orbit Path GeoJSON Source & Layer
+            globeMap.addSource("airship-orbit", {
+                type: "geojson",
+                data: buildAirshipOrbitGeoJSON()
+            });
+
+            globeMap.addLayer({
+                id: "airship-orbit-path",
+                type: "line",
+                source: "airship-orbit",
+                layout: {
+                    "line-cap": "round",
+                    "line-join": "round",
+                    "visibility": airshipVisible ? "visible" : "none"
+                },
+                paint: {
+                    "line-color": "#fbbf24",
+                    "line-width": 1.75,
+                    "line-opacity": 0.4,
+                    "line-dasharray": [4, 4],
+                    "line-blur": 0.8
+                }
+            });
+
+            // Add Airship Dynamic GeoJSON Source
+            globeMap.addSource("airship", {
+                type: "geojson",
+                data: getAirshipGeoJSON(getAllAirshipPositions(airshipProgress))
+            });
+
+            // Searchlight scan footprint on ground
+            globeMap.addLayer({
+                id: "airship-searchlight",
+                type: "circle",
+                source: "airship",
+                layout: {
+                    "visibility": airshipVisible ? "visible" : "none"
+                },
+                paint: {
+                    "circle-radius": [
+                        "interpolate", ["linear"], ["zoom"],
+                        1, 14,
+                        5, 28,
+                        9, 48
+                    ],
+                    "circle-color": "rgba(254, 240, 138, 0.22)",
+                    "circle-blur": 0.5,
+                    "circle-stroke-width": 1.5,
+                    "circle-stroke-color": "rgba(250, 204, 21, 0.65)"
+                }
+            });
+
+            // Depth ping sonar ring on ground
+            globeMap.addLayer({
+                id: "airship-depth-ping",
+                type: "circle",
+                source: "airship",
+                layout: {
+                    "visibility": airshipVisible ? "visible" : "none"
+                },
+                paint: {
+                    "circle-radius": [
+                        "interpolate", ["linear"], ["zoom"],
+                        1, 26,
+                        5, 52,
+                        9, 85
+                    ],
+                    "circle-color": [
+                        "case",
+                        ["==", ["get", "isPinging"], true],
+                        ["coalesce", ["get", "pingColor"], "#fbbf24"],
+                        "rgba(0, 0, 0, 0)"
+                    ],
+                    "circle-blur": 0.55,
+                    "circle-stroke-width": 2.5,
+                    "circle-stroke-color": [
+                        "case",
+                        ["==", ["get", "isPinging"], true],
+                        ["coalesce", ["get", "pingColor"], "#fbbf24"],
+                        "rgba(0, 0, 0, 0)"
+                    ],
+                    "circle-opacity": [
+                        "case",
+                        ["==", ["get", "isPinging"], true],
+                        0.85,
+                        0.0
+                    ],
+                    "circle-stroke-opacity": [
+                        "case",
+                        ["==", ["get", "isPinging"], true],
+                        0.95,
+                        0.0
+                    ]
+                }
+            });
+
+            // Native WebGL Airship Symbol Layer directly on 3D Globe
+            globeMap.addLayer({
+                id: "airship-symbol",
+                type: "symbol",
+                source: "airship",
+                layout: {
+                    "icon-image": [
+                        "match",
+                        ["get", "vesselIdx"],
+                        1, "victorian-airship-1",
+                        2, "victorian-airship-2",
+                        "victorian-airship-0"
+                    ],
+                    "icon-rotate": ["coalesce", ["get", "iconHeading"], 0],
+                    "icon-rotation-alignment": "map",
+                    "icon-pitch-alignment": "map",
+                    "icon-allow-overlap": true,
+                    "icon-ignore-placement": true,
+                    "icon-size": 0.44,
+                    "visibility": airshipVisible ? "visible" : "none"
+                }
+            });
+
+            globeMap.on("click", "airship-symbol", function (e) {
+                if (e.features && e.features[0]) {
+                    var vIdx = e.features[0].properties.vesselIdx;
+                    showAirshipPopup(e.lngLat, vIdx);
+                }
+            });
+            globeMap.on("mouseenter", "airship-symbol", function () {
+                globeMap.getCanvas().style.cursor = "pointer";
+            });
+            globeMap.on("mouseleave", "airship-symbol", function () {
+                globeMap.getCanvas().style.cursor = "";
+            });
+
+            initAirshipModule();
+        } catch (airshipErr) {
+            console.error("Airship layer initialization error:", airshipErr);
         }
-
-        // Add Airship Orbit Path GeoJSON Source & Layer
-        globeMap.addSource("airship-orbit", {
-            type: "geojson",
-            data: buildAirshipOrbitGeoJSON()
-        });
-
-        globeMap.addLayer({
-            id: "airship-orbit-path",
-            type: "line",
-            source: "airship-orbit",
-            layout: {
-                "line-cap": "round",
-                "line-join": "round",
-                "visibility": airshipVisible ? "visible" : "none"
-            },
-            paint: {
-                "line-color": "#fbbf24",
-                "line-width": 1.75,
-                "line-opacity": 0.4,
-                "line-dasharray": [4, 4],
-                "line-blur": 0.8
-            }
-        });
-
-        // Add Airship Dynamic GeoJSON Source
-        globeMap.addSource("airship", {
-            type: "geojson",
-            data: getAirshipGeoJSON(getAllAirshipPositions(airshipProgress))
-        });
-
-        // Searchlight scan footprint on ground
-        globeMap.addLayer({
-            id: "airship-searchlight",
-            type: "circle",
-            source: "airship",
-            layout: {
-                "visibility": airshipVisible ? "visible" : "none"
-            },
-            paint: {
-                "circle-radius": [
-                    "interpolate", ["linear"], ["zoom"],
-                    1, 14,
-                    5, 28,
-                    9, 48
-                ],
-                "circle-color": "rgba(254, 240, 138, 0.22)",
-                "circle-blur": 0.5,
-                "circle-stroke-width": 1.5,
-                "circle-stroke-color": "rgba(250, 204, 21, 0.65)"
-            }
-        });
-
-        // Depth ping sonar ring on ground
-        globeMap.addLayer({
-            id: "airship-depth-ping",
-            type: "circle",
-            source: "airship",
-            layout: {
-                "visibility": airshipVisible ? "visible" : "none"
-            },
-            paint: {
-                "circle-radius": [
-                    "interpolate", ["linear"], ["zoom"],
-                    1, 26,
-                    5, 52,
-                    9, 85
-                ],
-                "circle-color": ["coalesce", ["get", "pingColor"], "rgba(254, 240, 138, 0.3)"],
-                "circle-blur": 0.55,
-                "circle-stroke-width": 2.5,
-                "circle-stroke-color": ["coalesce", ["get", "pingColor"], "#fbbf24"],
-                "circle-opacity": ["case", ["get", "isPinging"], 0.85, 0.0],
-                "circle-stroke-opacity": ["case", ["get", "isPinging"], 0.95, 0.0]
-            }
-        });
-
-        // Native WebGL Airship Symbol Layer directly on 3D Globe
-        globeMap.addLayer({
-            id: "airship-symbol",
-            type: "symbol",
-            source: "airship",
-            layout: {
-                "icon-image": ["concat", "victorian-airship-", ["to-string", ["get", "vesselIdx"]]],
-                "icon-rotate": ["get", "iconHeading"],
-                "icon-rotation-alignment": "map",
-                "icon-pitch-alignment": "map",
-                "icon-allow-overlap": true,
-                "icon-ignore-placement": true,
-                "icon-size": 0.44,
-                "visibility": airshipVisible ? "visible" : "none"
-            }
-        });
-
-        globeMap.on("click", "airship-symbol", function (e) {
-            if (e.features && e.features[0]) {
-                var vIdx = e.features[0].properties.vesselIdx;
-                showAirshipPopup(e.lngLat, vIdx);
-            }
-        });
-        globeMap.on("mouseenter", "airship-symbol", function () {
-            globeMap.getCanvas().style.cursor = "pointer";
-        });
-        globeMap.on("mouseleave", "airship-symbol", function () {
-            globeMap.getCanvas().style.cursor = "";
-        });
-
-        initAirshipModule();
 
         applyDepthFilters();
         mapLoaded = true;
