@@ -2348,6 +2348,22 @@ function getAirshipGeoJSON(positions) {
 
 var airship3DMarkers = [];
 
+function isCoordVisibleOnGlobe(lon, lat) {
+    if (!globeMap) return true;
+    try {
+        var center = globeMap.getCenter();
+        var toRad = Math.PI / 180;
+        var phi1 = lat * toRad;
+        var phi2 = center.lat * toRad;
+        var deltaLambda = (lon - center.lng) * toRad;
+        var cosAngle = Math.sin(phi1) * Math.sin(phi2) + Math.cos(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+        // Airships orbit at 420km altitude, so visible slightly beyond 90-degree horizon (~98 degrees)
+        return cosAngle >= -0.15;
+    } catch (e) {
+        return true;
+    }
+}
+
 function initAirshipModule() {
     if (!globeMap) return;
 
@@ -2367,11 +2383,15 @@ function initAirshipModule() {
             el.setAttribute("role", "button");
             el.setAttribute("aria-label", vessel.name + " 3D Airship Expedition");
 
+            var innerEl = document.createElement("div");
+            innerEl.className = "airship-marker-inner";
+            el.appendChild(innerEl);
+
             var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
             renderer.setSize(76, 44);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             renderer.shadowMap.enabled = false;
-            el.appendChild(renderer.domElement);
+            innerEl.appendChild(renderer.domElement);
 
             var scene = new THREE.Scene();
             // 3/4 Isometric Aerial Perspective Camera
@@ -2413,6 +2433,7 @@ function initAirshipModule() {
             airship3DMarkers.push({
                 vIdx: vIdx,
                 el: el,
+                innerEl: innerEl,
                 renderer: renderer,
                 scene: scene,
                 camera: camera,
@@ -2443,8 +2464,18 @@ function initAirshipModule() {
 
             airship3DMarkers.forEach(function (inst) {
                 var pos = positions[inst.vIdx] || positions[0];
-                inst.marker.setLngLat([pos.lon, pos.lat]);
-                inst.el.style.display = "block";
+                var isVisible = isCoordVisibleOnGlobe(pos.lon, pos.lat);
+
+                if (isVisible) {
+                    inst.marker.setLngLat([pos.lon, pos.lat]);
+                    inst.el.style.display = "block";
+                    inst.el.style.opacity = "1";
+                    inst.el.style.pointerEvents = "auto";
+                } else {
+                    inst.el.style.display = "none";
+                    inst.el.style.opacity = "0";
+                    inst.el.style.pointerEvents = "none";
+                }
 
                 if (inst.model) {
                     // High-speed 3D Propeller Rotation
@@ -2714,10 +2745,11 @@ function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
     // Apply visual ping to map marker
     airship3DMarkers.forEach(function (inst) {
         if (inst.vIdx === vIdx) {
-            inst.el.style.setProperty("--ping-depth-color", pingColor);
-            inst.el.classList.remove("is-depth-pinging");
-            void inst.el.offsetWidth; // Force reflow
-            inst.el.classList.add("is-depth-pinging");
+            var targetEl = inst.innerEl || inst.el;
+            targetEl.style.setProperty("--ping-depth-color", pingColor);
+            targetEl.classList.remove("is-depth-pinging");
+            void targetEl.offsetWidth; // Force reflow
+            targetEl.classList.add("is-depth-pinging");
 
             if (inst.model && inst.model.lanternLight && inst.model.lanternGlassMat) {
                 inst.model.currentPingColor = colorHex;
@@ -4798,6 +4830,7 @@ window.earthquakeApp.test = {
     getAirshipVesselForLatitude: getAirshipVesselForLatitude,
     triggerAirshipDetectionPing: triggerAirshipDetectionPing,
     checkRegionalEarthquakePings: checkRegionalEarthquakePings,
+    isCoordVisibleOnGlobe: isCoordVisibleOnGlobe,
     airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,

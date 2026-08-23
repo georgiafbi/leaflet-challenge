@@ -2377,17 +2377,21 @@ body {
 
 /* 3D Realtime Map Marker floating above globe */
 .airship-3d-marker {
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.airship-marker-inner {
   position: relative;
   width: 76px;
   height: 44px;
-  cursor: pointer;
-  pointer-events: auto;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85));
   transition: transform 0.15s ease-out, filter 0.15s ease-out;
   transform-origin: center center;
 }
 
-.airship-3d-marker::before {
+.airship-marker-inner::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -2403,16 +2407,16 @@ body {
   z-index: -1;
 }
 
-.airship-3d-marker:hover {
+.airship-3d-marker:hover .airship-marker-inner {
   filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.95));
   transform: scale(1.15);
 }
 
-.airship-3d-marker.is-depth-pinging {
+.airship-marker-inner.is-depth-pinging {
   animation: airshipDepthGlow 1.8s ease-out 3;
 }
 
-.airship-3d-marker.is-depth-pinging::before {
+.airship-marker-inner.is-depth-pinging::before {
   animation: airshipDepthSonarRing 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) 3;
 }
 
@@ -2449,7 +2453,7 @@ body {
   }
 }
 
-.airship-3d-marker canvas {
+.airship-marker-inner canvas {
   width: 100%;
   height: 100%;
   display: block;
