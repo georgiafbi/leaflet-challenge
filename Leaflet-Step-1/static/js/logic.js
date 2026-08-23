@@ -2077,51 +2077,34 @@ function createAirshipImage(vesselIdx) {
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
-    return canvas;
-}
-
     // Inner Glowing Flame
     ctx.beginPath();
     ctx.arc(cx + 48, cy + 17, 2, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff";
     ctx.fill();
 
-    // Radiant Golden Light Halo around Lantern & Forward Beam
+    // Radiant Light Halo around Lantern
     var lanternHalo = ctx.createRadialGradient(cx + 48, cy + 17, 2, cx + 48, cy + 17, 20);
-    lanternHalo.addColorStop(0, "rgba(254, 240, 138, 0.85)");
-    lanternHalo.addColorStop(0.4, "rgba(245, 158, 11, 0.45)");
-    lanternHalo.addColorStop(1, "rgba(245, 158, 11, 0)");
+    lanternHalo.addColorStop(0, trimColor);
+    lanternHalo.addColorStop(0.4, haloColor);
+    lanternHalo.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.beginPath();
     ctx.arc(cx + 48, cy + 17, 20, 0, Math.PI * 2);
     ctx.fillStyle = lanternHalo;
     ctx.fill();
 
-    // Forward Searchlight Cone from Lantern
-    var beamGrad = ctx.createRadialGradient(cx + 48, cy + 17, 4, cx + 80, cy + 30, 40);
-    beamGrad.addColorStop(0, "rgba(254, 240, 138, 0.65)");
-    beamGrad.addColorStop(0.3, "rgba(251, 191, 36, 0.35)");
-    beamGrad.addColorStop(1, "rgba(251, 191, 36, 0)");
-    ctx.beginPath();
-    ctx.moveTo(cx + 48, cy + 17);
-    ctx.lineTo(cx + 90, cy + 10);
-    ctx.lineTo(cx + 80, cy + 45);
-    ctx.closePath();
-    ctx.fillStyle = beamGrad;
-    ctx.fill();
-
     // 6. Propellers & Engines
-    // Stern Pusher Propeller
     ctx.beginPath();
     ctx.ellipse(cx - 26, cy + 15, 1.5, 6, 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(254, 240, 138, 0.85)";
+    ctx.fillStyle = trimColor;
     ctx.fill();
 
-    // Outrigger Turbines & Steam
+    // Outrigger Turbines
     ctx.beginPath();
     ctx.ellipse(cx - 2, cy + 7, 5, 2.5, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#292524";
     ctx.fill();
-    ctx.strokeStyle = "#fbbf24";
+    ctx.strokeStyle = trimColor;
     ctx.lineWidth = 0.7;
     ctx.stroke();
 
