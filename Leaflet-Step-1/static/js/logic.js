@@ -3047,22 +3047,24 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
         <div class="airship-title-wrap">
             <span class="airship-insignia">🛰️</span>
             <div>
-                <h3>${pos.name}</h3>
-                <p class="airship-subtitle">${pos.registry} · ${pos.tier}</p>
+                <div class="airship-title-row">
+                    <span class="airship-name">${pos.name}</span>
+                    <span class="airship-tier-tag">${pos.tier.replace(" Zonal Orbit", "")}</span>
+                </div>
+                <p class="airship-subtitle">${pos.registry} · 420 km LEO</p>
             </div>
         </div>
-        <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Vent">💨</div>
+        <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Whistle">💨</div>
     `;
     popupContent.appendChild(header);
 
     // Fleet Constellation Tab Selector
     var fleetTabs = document.createElement("div");
     fleetTabs.className = "airship-fleet-tabs";
-    fleetTabs.style.cssText = "display:flex;gap:4px;margin-bottom:8px;padding:2px;background:rgba(0,0,0,0.3);border-radius:6px;";
     fleetTabs.innerHTML = `
-        <button type="button" class="airship-fleet-tab ${vIdx === 0 ? "is-active" : ""}" data-vessel="0" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 0 ? "#b45309" : "transparent"};color:#fff;cursor:pointer;">North (36°N)</button>
-        <button type="button" class="airship-fleet-tab ${vIdx === 1 ? "is-active" : ""}" data-vessel="1" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 1 ? "#0284c7" : "transparent"};color:#fff;cursor:pointer;">Equator (0°)</button>
-        <button type="button" class="airship-fleet-tab ${vIdx === 2 ? "is-active" : ""}" data-vessel="2" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 2 ? "#e11d48" : "transparent"};color:#fff;cursor:pointer;">South (35°S)</button>
+        <button type="button" class="airship-fleet-tab ${vIdx === 0 ? "is-active" : ""}" data-vessel="0">North (36°N)</button>
+        <button type="button" class="airship-fleet-tab ${vIdx === 1 ? "is-active" : ""}" data-vessel="1">Equator (0°)</button>
+        <button type="button" class="airship-fleet-tab ${vIdx === 2 ? "is-active" : ""}" data-vessel="2">South (35°S)</button>
     `;
     popupContent.appendChild(fleetTabs);
 
@@ -3077,12 +3079,12 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
         });
     });
 
-    // 3D Realtime Airship Inspector Viewport
+    // 3D Realtime Airship Inspector Viewport (Compact)
     var viewport3D = document.createElement("div");
     viewport3D.className = "airship-3d-viewport";
     viewport3D.innerHTML = `
         <canvas id="airship-popup-3d-canvas"></canvas>
-        <div class="airship-3d-badge">⚙️ 3D Model Inspector · Drag to Rotate</div>
+        <div class="airship-3d-badge">⚙️ 3D Model · Drag to Rotate</div>
     `;
     popupContent.appendChild(viewport3D);
 
@@ -3090,24 +3092,20 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
     grid.className = "airship-gauge-grid";
     grid.innerHTML = `
         <div class="airship-gauge">
-            <span class="gauge-label">Orbital Alt</span>
-            <strong class="gauge-val">420 km</strong>
-            <span class="gauge-sub">LEO Zonal Orbit</span>
-        </div>
-        <div class="airship-gauge">
-            <span class="gauge-label">Velocity</span>
+            <span class="gauge-label">Speed</span>
             <strong class="gauge-val">7.66 km/s</strong>
-            <span class="gauge-sub">27,600 km/h</span>
         </div>
         <div class="airship-gauge">
-            <span class="gauge-label">Track Heading</span>
+            <span class="gauge-label">Track</span>
             <strong class="gauge-val">${pos.headingCompass}</strong>
-            <span class="gauge-sub">${pos.tier}</span>
         </div>
         <div class="airship-gauge">
-            <span class="gauge-label">Sub-Satellite Pt</span>
-            <strong class="gauge-val">${pos.lat > 0 ? pos.lat + "°N" : Math.abs(pos.lat) + "°S"}, ${pos.lon > 0 ? pos.lon + "°E" : Math.abs(pos.lon) + "°W"}</strong>
-            <span class="gauge-sub">Orbital Fix</span>
+            <span class="gauge-label">Alt</span>
+            <strong class="gauge-val">420 km LEO</strong>
+        </div>
+        <div class="airship-gauge">
+            <span class="gauge-label">Sub-Sat Fix</span>
+            <strong class="gauge-val">${pos.lat > 0 ? pos.lat.toFixed(1) + "°N" : Math.abs(pos.lat).toFixed(1) + "°S"}, ${pos.lon > 0 ? pos.lon.toFixed(1) + "°E" : Math.abs(pos.lon).toFixed(1) + "°W"}</strong>
         </div>
     `;
     popupContent.appendChild(grid);
@@ -3115,7 +3113,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
     var dispatch = document.createElement("div");
     dispatch.className = "airship-dispatch-card";
     dispatch.innerHTML = `
-        <p class="dispatch-title"><strong>Current Overflight:</strong> ${pos.currentWaypoint}</p>
+        <p class="dispatch-title"><span class="dispatch-tag">OVERFLIGHT</span> ${pos.currentWaypoint}</p>
         <p class="dispatch-note">“${pos.note}”</p>
     `;
     popupContent.appendChild(dispatch);
@@ -3127,7 +3125,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
     followBtn.id = "airship-follow-btn";
     followBtn.type = "button";
     followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
-    followBtn.textContent = isFollowingAirship ? "🛰️ Track " + pos.name + " (Active)" : "🛰️ Track " + pos.name;
+    followBtn.textContent = isFollowingAirship ? "🛰️ Lock Camera" : "🛰️ Track Orbit";
     followBtn.addEventListener("click", function () {
         toggleFollowAirship(undefined, vIdx);
     });
@@ -3136,7 +3134,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
     var whistleBtn = document.createElement("button");
     whistleBtn.type = "button";
     whistleBtn.className = "airship-btn airship-btn-whistle";
-    whistleBtn.textContent = "💨 Steam Whistle";
+    whistleBtn.textContent = "💨 Whistle";
     whistleBtn.addEventListener("click", soundSteamWhistle);
     actions.appendChild(whistleBtn);
 
@@ -3146,7 +3144,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
         airshipActivePopup.remove();
     }
 
-    airshipActivePopup = new maplibregl.Popup({ maxWidth: "340px", offset: 12, className: "airship-maplibre-popup" })
+    airshipActivePopup = new maplibregl.Popup({ maxWidth: "290px", offset: 10, className: "airship-maplibre-popup" })
         .setLngLat(lngLat || [pos.lon, pos.lat])
         .setDOMContent(popupContent)
         .addTo(globeMap);

@@ -1589,6 +1589,11 @@ body {
   z-index: 1000 !important;
 }
 
+.airship-maplibre-popup {
+  max-width: min(290px, calc(100vw - 24px)) !important;
+  z-index: 1000 !important;
+}
+
 .airship-maplibre-popup .maplibregl-popup-content {
   background: transparent !important;
   border: none !important;
@@ -1600,37 +1605,54 @@ body {
 .airship-popup {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
-  background: linear-gradient(145deg, rgba(28, 19, 10, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  gap: 5px !important;
+  background: linear-gradient(145deg, rgba(24, 16, 8, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
   border: 1px solid rgba(251, 191, 36, 0.45) !important;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.12) !important;
-  border-radius: 12px;
-  padding: 12px 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), inset 0 0 12px rgba(245, 158, 11, 0.12) !important;
+  border-radius: 11px;
+  padding: 8px 10px;
   color: #fef3c7;
-  width: 330px;
+  width: 290px;
+  max-width: 100%;
+  max-height: min(440px, calc(100vh - 90px));
+  overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.3) transparent;
+}
+
+.airship-popup::-webkit-scrollbar {
+  width: 4px;
+}
+
+.airship-popup::-webkit-scrollbar-thumb {
+  background: rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
 }
 
 .airship-popup-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(251, 191, 36, 0.25);
-  padding-bottom: 6px;
-  margin-bottom: 2px;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.22);
+  padding-bottom: 4px;
+  margin-bottom: 1px;
   width: 100%;
 }
 
 .airship-title-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .airship-insignia {
-  font-size: 1.3rem;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+  font-size: 1.15rem;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
   animation: gearSpin 12s linear infinite;
+  flex-shrink: 0;
 }
 
 @keyframes gearSpin {
@@ -1638,28 +1660,50 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.airship-popup-header h3 {
-  margin: 0;
-  font-size: 1.02rem;
+.airship-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.airship-name {
+  font-size: 0.9rem;
   font-weight: 800;
   color: #fef08a;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
-  letter-spacing: 0.03em;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.airship-tier-tag {
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(251, 191, 36, 0.18);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  white-space: nowrap;
 }
 
 .airship-subtitle {
   margin: 1px 0 0;
-  font-size: 0.66rem;
-  color: #d1d5db;
+  font-size: 0.6rem;
+  color: #94a3b8;
   font-style: italic;
-  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .airship-steam-puff {
-  font-size: 1.1rem;
-  opacity: 0.4;
+  font-size: 0.95rem;
+  opacity: 0.45;
   transition: all 0.2s ease;
   user-select: none;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .airship-steam-puff.puff-active {
@@ -1668,19 +1712,69 @@ body {
 
 @keyframes steamBlast {
   0% { transform: scale(1) translateY(0); opacity: 1; filter: drop-shadow(0 0 8px #fff); }
-  50% { transform: scale(1.6) translateY(-8px); opacity: 0.8; }
-  100% { transform: scale(2) translateY(-14px); opacity: 0; }
+  50% { transform: scale(1.5) translateY(-6px); opacity: 0.8; }
+  100% { transform: scale(1.9) translateY(-12px); opacity: 0; }
+}
+
+.airship-fleet-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 5px;
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.airship-fleet-tab {
+  flex: 1;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 3px 2px;
+  border: none;
+  border-radius: 4px;
+  color: #94a3b8;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+  font-family: inherit;
+}
+
+.airship-fleet-tab:hover {
+  color: #fef08a;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.airship-fleet-tab.is-active[data-vessel="0"] {
+  background: #b45309;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.airship-fleet-tab.is-active[data-vessel="1"] {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.airship-fleet-tab.is-active[data-vessel="2"] {
+  background: #e11d48;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .airship-3d-viewport {
   position: relative;
   width: 100%;
-  height: 130px;
+  height: 84px;
   background: radial-gradient(circle at center, rgba(30, 41, 59, 0.85) 0%, rgba(2, 6, 23, 0.95) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 7px;
   overflow: hidden;
-  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7);
   cursor: grab;
   box-sizing: border-box;
 }
@@ -1697,15 +1791,15 @@ body {
 
 .airship-3d-badge {
   position: absolute;
-  bottom: 5px;
+  bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(251, 191, 36, 0.35);
   color: #fde68a;
-  font-size: 0.6rem;
+  font-size: 0.52rem;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 1px 6px;
   border-radius: 999px;
   pointer-events: none;
   white-space: nowrap;
@@ -1715,99 +1809,118 @@ body {
 .airship-gauge-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .airship-gauge {
-  background: rgba(41, 37, 36, 0.65);
-  border: 1px solid rgba(217, 119, 6, 0.35);
-  border-radius: 7px;
-  padding: 5px 8px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-radius: 5px;
+  padding: 3px 6px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0px;
 }
 
 .gauge-label {
-  font-size: 0.62rem;
+  font-size: 0.54rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #fbbf24;
   font-weight: 700;
 }
 
 .gauge-val {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.gauge-sub {
-  font-size: 0.6rem;
-  color: #9ca3af;
+  line-height: 1.2;
 }
 
 .airship-dispatch-card {
-  background: rgba(24, 24, 27, 0.55);
-  border-left: 3px solid #f59e0b;
-  border-radius: 6px;
-  padding: 7px 9px;
+  background: rgba(15, 23, 42, 0.75);
+  border-left: 2.5px solid #f59e0b;
+  border-radius: 4px;
+  padding: 4px 7px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .dispatch-title {
-  margin: 0 0 3px;
-  font-size: 0.72rem;
+  margin: 0 0 2px;
+  font-size: 0.66rem;
   color: #fde68a;
-  line-height: 1.25;
+  line-height: 1.2;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dispatch-tag {
+  font-size: 0.5rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.25);
+  color: #fef08a;
+  letter-spacing: 0.03em;
 }
 
 .dispatch-note {
   margin: 0;
-  font-size: 0.7rem;
-  color: #e5e7eb;
+  font-size: 0.6rem;
+  color: #cbd5e1;
   font-style: italic;
-  line-height: 1.3;
+  line-height: 1.22;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .airship-actions {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   width: 100%;
+  margin-top: 1px;
 }
 
 .airship-btn {
   flex: 1;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.66rem;
   font-weight: 700;
   cursor: pointer;
-  font: inherit;
-  transition: all 0.18s ease;
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  font-family: inherit;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(251, 191, 36, 0.35);
   background: rgba(180, 83, 9, 0.35);
   color: #fef08a;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .airship-btn:hover {
   background: #d97706;
   color: #ffffff;
   border-color: #fef08a;
-  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.4);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
 }
 
 .airship-btn-follow.is-active {
   background: #0ea5e9;
   border-color: #38bdf8;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
 }
 
 /* Magnitude Filter Group Base Styles */
