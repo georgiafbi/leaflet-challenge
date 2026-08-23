@@ -2352,15 +2352,15 @@ function initAirshipModule() {
             el.setAttribute("aria-label", vessel.name + " 3D Airship Expedition");
 
             var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(96, 56);
+            renderer.setSize(76, 44);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             renderer.shadowMap.enabled = false;
             el.appendChild(renderer.domElement);
 
             var scene = new THREE.Scene();
             // 3/4 Isometric Aerial Perspective Camera
-            var camera = new THREE.PerspectiveCamera(36, 96 / 56, 0.1, 100);
-            camera.position.set(2.4, 4.4, 10.5);
+            var camera = new THREE.PerspectiveCamera(34, 76 / 44, 0.1, 100);
+            camera.position.set(2.2, 3.8, 9.8);
             camera.lookAt(0, -0.2, 0);
 
             // Rich 3-Point Studio Lighting for dramatic volumetric specular curves
@@ -2381,7 +2381,7 @@ function initAirshipModule() {
 
             var model = build3DAirshipMesh(THREE, vIdx);
             if (model) {
-                model.group.scale.setScalar(0.72);
+                model.group.scale.setScalar(0.55);
                 scene.add(model.group);
             }
 
@@ -3021,11 +3021,12 @@ function build3DAirshipMesh(THREE, vesselIdx) {
     return { group: ship, props: props, exhaustParticles: exhaustParticles, lanternGroup: lanternGroup };
 }
 
-function init3DAirshipInspector(container) {
+function init3DAirshipInspector(container, vesselIdx) {
     if (!window.THREE || !container) return null;
     var canvas = container.querySelector("canvas");
     if (!canvas) return null;
 
+    var vIdx = typeof vesselIdx === "number" ? vesselIdx : 0;
     var width = container.clientWidth || 300;
     var height = container.clientHeight || 155;
 
@@ -3048,11 +3049,12 @@ function init3DAirshipInspector(container) {
     sun.position.set(15, 25, 20);
     scene.add(sun);
 
-    var rim = new THREE.DirectionalLight(0x38bdf8, 1.1);
+    var rimColor = vIdx === 1 ? 0x38bdf8 : (vIdx === 2 ? 0xfb7185 : 0xf59e0b);
+    var rim = new THREE.DirectionalLight(rimColor, 1.2);
     rim.position.set(-20, -10, -15);
     scene.add(rim);
 
-    var airship3D = build3DAirshipMesh(THREE);
+    var airship3D = build3DAirshipMesh(THREE, vIdx);
     if (!airship3D) return null;
 
     airship3D.group.position.set(0, 0, 0);
@@ -3216,7 +3218,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
                 activeDrawer3DInspector.destroy();
             }
             setTimeout(function () {
-                activeDrawer3DInspector = init3DAirshipInspector(vp);
+                activeDrawer3DInspector = init3DAirshipInspector(vp, vIdx);
             }, 50);
         }
         return;
