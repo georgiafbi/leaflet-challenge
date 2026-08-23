@@ -2121,31 +2121,78 @@ function createAirshipImage() {
     return ctx.getImageData(0, 0, width, height);
 }
 
+var SATELLITE_ORBIT = {
+    inclinationDeg: 51.6, // Low Earth Orbit standard inclination
+    nodeLonDeg: -60.0,    // Ascending node longitude offset
+    periodSec: 120,       // 2 minutes for 1 full orbital revolution around the planet
+    altitude: "420 km (Low Earth Orbit · 3,850 m Equivalent)",
+    speed: "7.66 km/s (27,600 km/h · 48 knots Cruise)",
+    orbitType: "Low Earth Orbit (LEO Satellite)",
+    inclination: "51.6° LEO"
+};
+
+function calculateOrbitCoordinates(progress) {
+    var u = ((progress % 1.0) + 1.0) % 1.0;
+    var theta = u * Math.PI * 2;
+    var incRad = (SATELLITE_ORBIT.inclinationDeg * Math.PI) / 180;
+
+    // Exact spherical satellite orbital trigonometry
+    var latRad = Math.asin(Math.sin(incRad) * Math.sin(theta));
+    var lat = (latRad * 180) / Math.PI;
+
+    var dLonRad = Math.atan2(Math.cos(incRad) * Math.sin(theta), Math.cos(theta));
+    var rawLon = SATELLITE_ORBIT.nodeLonDeg + (dLonRad * 180) / Math.PI;
+    var lon = ((rawLon + 540) % 360) - 180;
+
+    return { lon: lon, lat: lat, u: u };
+}
+
+function findNearestOverflight(lon, lat) {
+    if (!airshipWaypoints || !airshipWaypoints.length) {
+        return { name: "Global Orbital Track", note: "Scanning tectonic subduction zones from satellite orbit." };
+    }
+    var bestWp = airshipWaypoints[0];
+    var bestDist = Infinity;
+    for (var i = 0; i < airshipWaypoints.length; i++) {
+        var wp = airshipWaypoints[i];
+        var dLat = (wp.lat - lat) * (Math.PI / 180);
+        var dLon = (((wp.lon - lon + 540) % 360) - 180) * (Math.PI / 180);
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat * Math.PI / 180) * Math.cos(wp.lat * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        var dist = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestWp = wp;
+        }
+    }
+    return bestWp;
+}
+
 function buildAirshipOrbitGeoJSON() {
     var features = [];
-    var N = airshipWaypoints.length;
-    var steps = 180;
+    var steps = 360;
     var coords = [];
 
     for (var s = 0; s <= steps; s++) {
-        var u = (s / steps) % 1.0;
-        var pos = getAirshipPosition(u);
-        coords.push([pos.lon, pos.lat]);
+        var u = s / steps;
+        var pt = calculateOrbitCoordinates(u);
+        coords.push([pt.lon, pt.lat]);
     }
 
-    // Segment across antimeridian if needed
+    // Segment across antimeridian for clean rendering
     var segments = [[]];
     for (var i = 0; i < coords.length; i++) {
-        var pt = coords[i];
+        var p = coords[i];
         var currSeg = segments[segments.length - 1];
         if (currSeg.length > 0) {
-            var prevPt = currSeg[currSeg.length - 1];
-            if (Math.abs(pt[0] - prevPt[0]) > 180) {
-                segments.push([pt]);
+            var prevP = currSeg[currSeg.length - 1];
+            if (Math.abs(p[0] - prevP[0]) > 180) {
+                segments.push([p]);
                 continue;
             }
         }
-        currSeg.push(pt);
+        currSeg.push(p);
     }
 
     segments.forEach(function (seg, idx) {
@@ -2162,41 +2209,34 @@ function buildAirshipOrbitGeoJSON() {
 }
 
 function getAirshipPosition(progress) {
-    var N = airshipWaypoints.length;
-    var normProgress = ((progress % 1.0) + 1.0) % 1.0;
-    var floatIdx = normProgress * N;
-    var idx = Math.floor(floatIdx);
-    var t = floatIdx - idx;
+    var pt = calculateOrbitCoordinates(progress);
 
-    var wpA = airshipWaypoints[idx % N];
-    var wpB = airshipWaypoints[(idx + 1) % N];
-
-    var deltaLon = ((wpB.lon - wpA.lon + 540) % 360) - 180;
-    var lon = ((wpA.lon + t * deltaLon + 180) % 360) - 180;
-    var lat = wpA.lat + t * (wpB.lat - wpA.lat) + Math.sin(t * Math.PI) * 1.5;
-
-    // Smooth heading calculation
-    var radLat = (wpA.lat * Math.PI) / 180;
-    var dy = ((wpB.lat - wpA.lat) * Math.PI) / 180;
-    var dx = (deltaLon * Math.PI) / 180 * Math.cos(radLat);
+    // Compute instantaneous velocity / heading vector along orbit
+    var ptNext = calculateOrbitCoordinates(progress + 0.001);
+    var deltaLon = ((ptNext.lon - pt.lon + 540) % 360) - 180;
+    var dy = (ptNext.lat - pt.lat) * (Math.PI / 180);
+    var dx = deltaLon * (Math.PI / 180) * Math.cos(pt.lat * Math.PI / 180);
     var bearing = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
 
     // Icon points East (90 deg) in canvas, so iconHeading = (bearing - 90 + 360) % 360
     var iconHeading = (bearing - 90 + 360) % 360;
-
     var headingCompass = formatCompassHeading(bearing);
 
+    var landmark = findNearestOverflight(pt.lon, pt.lat);
+
     return {
-        lon: Number(lon.toFixed(4)),
-        lat: Number(lat.toFixed(4)),
+        lon: Number(pt.lon.toFixed(4)),
+        lat: Number(pt.lat.toFixed(4)),
         bearing: Number(bearing.toFixed(1)),
         iconHeading: Number(iconHeading.toFixed(1)),
         headingCompass: headingCompass,
-        currentWaypoint: wpA.name,
-        nextWaypoint: wpB.name,
-        note: wpA.note,
-        altitude: "3,850 m (Ether-buoyant)",
-        speed: "48 knots (Twin Turbines)"
+        currentWaypoint: landmark.name,
+        nextWaypoint: "Global Satellite Orbit (51.6° Inclination)",
+        note: landmark.note,
+        altitude: SATELLITE_ORBIT.altitude,
+        speed: SATELLITE_ORBIT.speed,
+        orbitType: SATELLITE_ORBIT.orbitType,
+        inclination: SATELLITE_ORBIT.inclination
     };
 }
 
@@ -2243,9 +2283,9 @@ function initAirshipModule() {
         var elapsed = timestamp - airshipLastTime;
         airshipLastTime = timestamp;
 
-        // Cruise speed: 1 full global circuit in 180 seconds (3 minutes)
+        // Satellite orbital cruise: 1 full orbit around the planet in 120 seconds (2 minutes)
         if (airshipVisible) {
-            airshipProgress = (airshipProgress + (elapsed / 180000)) % 1.0;
+            airshipProgress = (airshipProgress + (elapsed / 120000)) % 1.0;
             var pos = getAirshipPosition(airshipProgress);
             var src = globeMap.getSource("airship");
             if (src) {
@@ -2255,11 +2295,11 @@ function initAirshipModule() {
             // Update topbar airship badge if present
             var badge = document.getElementById("airship-status-pill");
             if (badge) {
-                badge.textContent = "HMS Aetheria";
+                badge.textContent = "🛰️ HMS Aetheria";
             }
             var flyBtn = document.getElementById("fly-to-airship");
             if (flyBtn) {
-                flyBtn.title = "HMS Aetheria · Overflying " + pos.currentWaypoint;
+                flyBtn.title = "HMS Aetheria · Satellite Orbit over " + pos.currentWaypoint + " (Alt: " + pos.altitude + " · " + pos.speed + ")";
             }
 
             // Update camera if follow mode is active
@@ -2942,10 +2982,10 @@ function showAirshipPopup(lngLat) {
     header.className = "airship-popup-header";
     header.innerHTML = `
         <div class="airship-title-wrap">
-            <span class="airship-insignia">⚙️</span>
+            <span class="airship-insignia">🛰️</span>
             <div>
                 <h3>HMS Aetheria</h3>
-                <p class="airship-subtitle">Royal Aerial Seismological Expedition · No. 1894-A</p>
+                <p class="airship-subtitle">Royal Celestial Orbiting Vessel · LEO Satellite Expedition</p>
             </div>
         </div>
         <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Vent">💨</div>
@@ -2965,24 +3005,24 @@ function showAirshipPopup(lngLat) {
     grid.className = "airship-gauge-grid";
     grid.innerHTML = `
         <div class="airship-gauge">
-            <span class="gauge-label">Altitude</span>
-            <strong class="gauge-val">3,850 m</strong>
-            <span class="gauge-sub">Ether-buoyant</span>
+            <span class="gauge-label">Orbital Alt</span>
+            <strong class="gauge-val">420 km</strong>
+            <span class="gauge-sub">LEO Satellite Orbit</span>
         </div>
         <div class="airship-gauge">
-            <span class="gauge-label">Airspeed</span>
-            <strong class="gauge-val">48 kts</strong>
-            <span class="gauge-sub">Twin Turbines</span>
+            <span class="gauge-label">Velocity</span>
+            <strong class="gauge-val">7.66 km/s</strong>
+            <span class="gauge-sub">27,600 km/h</span>
         </div>
         <div class="airship-gauge">
-            <span class="gauge-label">Heading</span>
+            <span class="gauge-label">Track Heading</span>
             <strong class="gauge-val">${pos.headingCompass}</strong>
-            <span class="gauge-sub">Astrolabe</span>
+            <span class="gauge-sub">51.6° Inclination</span>
         </div>
         <div class="airship-gauge">
-            <span class="gauge-label">Coordinates</span>
+            <span class="gauge-label">Sub-Satellite Pt</span>
             <strong class="gauge-val">${pos.lat > 0 ? pos.lat + "°N" : Math.abs(pos.lat) + "°S"}, ${pos.lon > 0 ? pos.lon + "°E" : Math.abs(pos.lon) + "°W"}</strong>
-            <span class="gauge-sub">Sextant Fix</span>
+            <span class="gauge-sub">Orbital Fix</span>
         </div>
     `;
     popupContent.appendChild(grid);
@@ -3002,7 +3042,7 @@ function showAirshipPopup(lngLat) {
     followBtn.id = "airship-follow-btn";
     followBtn.type = "button";
     followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
-    followBtn.textContent = isFollowingAirship ? "🔭 Lock Camera (Active)" : "🔭 Follow Airship";
+    followBtn.textContent = isFollowingAirship ? "🛰️ Track Orbit (Active)" : "🛰️ Track Orbit";
     followBtn.addEventListener("click", function () {
         toggleFollowAirship();
     });

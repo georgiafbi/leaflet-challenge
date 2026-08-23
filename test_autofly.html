@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Earthquake Monitor</title>
+
+  <!-- MapLibre GL CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
+
+  <!-- Our CSS -->
+  <link rel="stylesheet" type="text/css" href="Leaflet-Step-1/static/css/style.css?v=20260822_210000">
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Global seismic activity</p>
+        <h1>Earthquake Monitor</h1>
+      </div>
+      <div class="header-actions">
+        <div class="date-range" aria-label="Earthquake date range">
+          <span class="range-label" id="range-label">Range</span>
+          <div class="range-presets" role="group" aria-labelledby="range-label">
+            <button class="range-preset" type="button" data-range="1h">1h</button>
+            <button class="range-preset is-active" type="button" data-range="24h" aria-pressed="true">24h</button>
+            <button class="range-preset" type="button" data-range="7d">7d</button>
+            <button class="range-preset" type="button" data-range="30d">30d</button>
+          </div>
+          <label class="visually-hidden" for="range-select">More time ranges</label>
+          <select id="range-select" class="range-select" aria-label="More earthquake time ranges"></select>
+        </div>
+        <div class="status-pill" role="status" aria-live="polite">Loading Â· 24 hours</div>
+      </div>
+    </header>
+
+    <section class="toolbar-panel" aria-label="Search and filter earthquakes">
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">ðŸ”</span>
+        <input id="quake-search" type="search" placeholder="Search place or country (e.g. Japan, California, Chile)â€¦" aria-label="Search earthquakes by place or country" autocomplete="off" />
+        <button id="clear-search" class="clear-search-btn" type="button" aria-label="Clear search query" hidden>âœ•</button>
+      </div>
+
+      <div class="mag-filters" role="group" aria-label="Minimum magnitude filter">
+        <span class="mag-filter-label">Min Mag</span>
+        <button class="mag-filter-chip is-active" type="button" data-mag="0" aria-pressed="true">All</button>
+        <button class="mag-filter-chip" type="button" data-mag="2.5" aria-pressed="false">2.5+</button>
+        <button class="mag-filter-chip" type="button" data-mag="4.5" aria-pressed="false">4.5+</button>
+        <button class="mag-filter-chip" type="button" data-mag="6.0" aria-pressed="false">6.0+</button>
+        <button class="mag-filter-chip" type="button" data-mag="7.0" aria-pressed="false">7.0+</button>
+      </div>
+
+      <div class="toolbar-actions">
+        <button id="fly-to-airship" class="toolbar-btn airship-btn-indicator" type="button" title="Locate Victorian Dirigible (HMS Aetheria) orbiting the globe">
+          <span class="btn-icon" aria-hidden="true">ðŸ›¸</span>
+          <span id="airship-status-pill">HMS Aetheria</span>
+        </button>
+        <button id="toggle-feed-drawer" class="toolbar-btn" type="button" aria-expanded="false" aria-controls="feed-drawer" title="Toggle recent and notable earthquake list">
+          <span class="btn-icon" aria-hidden="true">âš¡</span>
+          <span>Feed List</span>
+        </button>
+        <button id="toggle-timelapse" class="toolbar-btn timelapse-btn" type="button" aria-pressed="false" title="Play chronological seismic timelapse">
+          <span class="btn-icon" aria-hidden="true">â–¶</span>
+          <span id="timelapse-btn-label">Timelapse</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Interactive Timelapse Scrubber Bar -->
+    <div id="timelapse-bar" class="timelapse-bar" hidden aria-label="Seismic timelapse controller">
+      <button id="timelapse-play-pause" class="timelapse-control-btn" type="button" aria-label="Play or pause timelapse">âšâš</button>
+      <div class="timelapse-progress-wrap">
+        <input id="timelapse-range" type="range" min="0" max="100" value="0" step="0.5" aria-label="Timelapse time progress" />
+        <div id="timelapse-time-label" class="timelapse-time-label" aria-live="polite">Playback: 0%</div>
+      </div>
+      <button id="timelapse-stop" class="timelapse-control-btn" type="button" aria-label="Stop timelapse">â– </button>
+    </div>
+
+    <section class="stats-panel" aria-label="Earthquake summary">
+      <div class="stat-card">
+        <span class="stat-label">Earthquakes</span>
+        <strong id="total-events">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Strongest</span>
+        <strong id="strongest-magnitude">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Deepest</span>
+        <strong id="deepest-depth">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Latest</span>
+        <strong id="latest-event">--</strong>
+      </div>
+    </section>
+    <p id="feed-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+
+    <!-- The div that holds our map and side activity drawer -->
+    <div id="map-wrap">
+      <div id="map-id"></div>
+
+      <!-- Activity Feed Drawer -->
+      <aside id="feed-drawer" class="feed-drawer" aria-label="Recent earthquake list" hidden>
+        <div class="feed-drawer-header">
+          <div class="feed-drawer-title">
+            <h3>Recent Earthquakes</h3>
+            <span id="feed-drawer-count" class="feed-drawer-count">0 events</span>
+          </div>
+          <button id="close-feed-drawer" class="feed-drawer-close" type="button" aria-label="Close activity feed">âœ•</button>
+        </div>
+        <div id="feed-drawer-list" class="feed-drawer-list" role="feed" aria-label="Earthquake items">
+          <p class="feed-drawer-empty">Loading earthquakesâ€¦</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- MapLibre GL JavaScript -->
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+
+  <!-- API Key -->
+  <script type="text/javascript" src="Leaflet-Step-1/static/js/config.js"></script>
+  <!-- Tectonic Plates Data -->
+  <script type="text/javascript" src="Leaflet-Step-1/static/js/plates-data.js?v=20260822_210000"></script>
+  <!-- Local country lookup (pinned version; classification has a built-in fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/@rapideditor/country-coder@5.6.1/dist/country-coder.iife.min.js"></script>
+  <!-- Three.js 3D Engine for Victorian Dirigible -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Our JavaScript -->
+  <script type="text/javascript" src="Leaflet-Step-1/static/js/logic.js?v=20260822_210000"></script>
+<script>
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        const btn = document.getElementById("fly-to-airship");
+        if (btn) btn.click();
+    }, 1500);
+});
+</script>
+</body>
+
+</html>
