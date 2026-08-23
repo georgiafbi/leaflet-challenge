@@ -1594,6 +1594,11 @@ body {
   z-index: 1000 !important;
 }
 
+.airship-maplibre-popup {
+  max-width: 340px !important;
+  z-index: 1000 !important;
+}
+
 .airship-maplibre-popup .maplibregl-popup-content {
   background: transparent !important;
   border: none !important;
@@ -1605,29 +1610,29 @@ body {
 .airship-popup {
   display: flex !important;
   flex-direction: column !important;
-  gap: 5px !important;
-  background: linear-gradient(145deg, rgba(24, 16, 8, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
-  border: 1px solid rgba(251, 191, 36, 0.45) !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), inset 0 0 12px rgba(245, 158, 11, 0.12) !important;
-  border-radius: 11px;
-  padding: 8px 10px;
+  gap: 8px !important;
+  background: linear-gradient(180deg, #1c1308 0%, #0f172a 100%) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.55) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(245, 158, 11, 0.15) !important;
+  border-radius: 14px;
+  padding: 12px 14px;
   color: #fef3c7;
-  width: 290px;
+  width: 320px;
   max-width: 100%;
-  max-height: min(440px, calc(100vh - 90px));
+  max-height: 80vh;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
   scrollbar-width: thin;
-  scrollbar-color: rgba(251, 191, 36, 0.3) transparent;
+  scrollbar-color: rgba(251, 191, 36, 0.4) transparent;
 }
 
 .airship-popup::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 .airship-popup::-webkit-scrollbar-thumb {
-  background: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.4);
   border-radius: 4px;
 }
 
@@ -1635,22 +1640,22 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(251, 191, 36, 0.22);
-  padding-bottom: 4px;
-  margin-bottom: 1px;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
   width: 100%;
 }
 
 .airship-title-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .airship-insignia {
-  font-size: 1.15rem;
-  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+  font-size: 1.35rem;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
   animation: gearSpin 12s linear infinite;
   flex-shrink: 0;
 }
@@ -1663,34 +1668,35 @@ body {
 .airship-title-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: nowrap;
 }
 
 .airship-name {
-  font-size: 0.9rem;
-  font-weight: 800;
+  font-size: 1.05rem;
+  font-weight: 900;
   color: #fef08a;
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .airship-tier-tag {
-  font-size: 0.56rem;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(251, 191, 36, 0.18);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.22);
   color: #fde68a;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.45);
   white-space: nowrap;
+  letter-spacing: 0.03em;
 }
 
 .airship-subtitle {
-  margin: 1px 0 0;
-  font-size: 0.6rem;
-  color: #94a3b8;
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: #cbd5e1;
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
@@ -1698,12 +1704,17 @@ body {
 }
 
 .airship-steam-puff {
-  font-size: 0.95rem;
-  opacity: 0.45;
+  font-size: 1.15rem;
+  opacity: 0.6;
   transition: all 0.2s ease;
   user-select: none;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.airship-steam-puff:hover {
+  opacity: 1;
+  transform: scale(1.2);
 }
 
 .airship-steam-puff.puff-active {
@@ -1717,27 +1728,27 @@ body {
 }
 
 .airship-fleet-tabs {
-  display: flex;
-  gap: 3px;
-  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 3px;
   background: rgba(0, 0, 0, 0.45);
-  border-radius: 5px;
-  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
   width: 100%;
   box-sizing: border-box;
 }
 
 .airship-fleet-tab {
-  flex: 1;
-  font-size: 0.6rem;
+  padding: 6px 2px;
+  font-size: 0.74rem;
   font-weight: 700;
-  padding: 3px 2px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #94a3b8;
   background: transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
   text-align: center;
   font-family: inherit;
@@ -1751,30 +1762,30 @@ body {
 .airship-fleet-tab.is-active[data-vessel="0"] {
   background: #b45309;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.45);
 }
 
 .airship-fleet-tab.is-active[data-vessel="1"] {
   background: #0284c7;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.45);
 }
 
 .airship-fleet-tab.is-active[data-vessel="2"] {
   background: #e11d48;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.45);
 }
 
 .airship-3d-viewport {
   position: relative;
   width: 100%;
-  height: 84px;
-  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.85) 0%, rgba(2, 6, 23, 0.95) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  border-radius: 7px;
+  height: 110px;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(2, 6, 23, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8);
   cursor: grab;
   box-sizing: border-box;
 }
@@ -1791,49 +1802,49 @@ body {
 
 .airship-3d-badge {
   position: absolute;
-  bottom: 3px;
+  bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.82);
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(251, 191, 36, 0.35);
   color: #fde68a;
-  font-size: 0.52rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
   pointer-events: none;
   white-space: nowrap;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .airship-gauge-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .airship-gauge {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(251, 191, 36, 0.22);
-  border-radius: 5px;
-  padding: 3px 6px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 8px;
+  padding: 6px 9px;
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  gap: 2px;
 }
 
 .gauge-label {
-  font-size: 0.54rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: #fbbf24;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .gauge-val {
-  font-size: 0.72rem;
+  font-size: 0.86rem;
   font-weight: 800;
   color: #ffffff;
   white-space: nowrap;
@@ -1843,41 +1854,43 @@ body {
 }
 
 .airship-dispatch-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-left: 2.5px solid #f59e0b;
-  border-radius: 4px;
-  padding: 4px 7px;
+  background: rgba(15, 23, 42, 0.85);
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  padding: 8px 10px;
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-left-width: 3px;
 }
 
 .dispatch-title {
-  margin: 0 0 2px;
-  font-size: 0.66rem;
+  margin: 0 0 3px;
+  font-size: 0.76rem;
   color: #fde68a;
-  line-height: 1.2;
-  font-weight: 700;
+  line-height: 1.25;
+  font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .dispatch-tag {
-  font-size: 0.5rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(245, 158, 11, 0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.3);
   color: #fef08a;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .dispatch-note {
   margin: 0;
-  font-size: 0.6rem;
-  color: #cbd5e1;
+  font-size: 0.72rem;
+  color: #e2e8f0;
   font-style: italic;
-  line-height: 1.22;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1886,24 +1899,23 @@ body {
 
 .airship-actions {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   width: 100%;
-  margin-top: 1px;
 }
 
 .airship-btn {
   flex: 1;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.66rem;
-  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.4);
   background: rgba(180, 83, 9, 0.35);
   color: #fef08a;
-  min-height: 28px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1920,7 +1932,7 @@ body {
   background: #0ea5e9;
   border-color: #38bdf8;
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
 }
 
 /* Magnitude Filter Group Base Styles */
@@ -2315,13 +2327,29 @@ body {
   }
 
   .airship-maplibre-popup {
-    max-width: calc(100vw - 28px) !important;
-    width: calc(100vw - 28px) !important;
+    position: fixed !important;
+    top: auto !important;
+    bottom: 12px !important;
+    left: 12px !important;
+    right: 12px !important;
+    transform: none !important;
+    max-width: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    z-index: 1000 !important;
+  }
+
+  .airship-maplibre-popup .maplibregl-popup-tip {
+    display: none !important;
   }
 
   .airship-popup {
     width: 100% !important;
     max-width: 100% !important;
+    border-radius: 16px !important;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.8) !important;
+    max-height: 60vh !important;
+    padding: 12px 14px !important;
   }
 
   .stats-panel {
