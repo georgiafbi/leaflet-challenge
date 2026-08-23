@@ -2574,6 +2574,64 @@ body {
   font-style: normal;
 }
 
+.guide-card-wide {
+  grid-column: 1 / -1;
+}
+
+.guide-ship-list {
+  margin: 8px 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.guide-ship-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.guide-ship-item.is-north {
+  border-left: 3px solid #fbbf24;
+}
+
+.guide-ship-item.is-equator {
+  border-left: 3px solid #38bdf8;
+}
+
+.guide-ship-item.is-south {
+  border-left: 3px solid #f43f5e;
+}
+
+.guide-ship-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.guide-ship-item.is-north .guide-ship-name {
+  color: #fde68a;
+}
+
+.guide-ship-item.is-equator .guide-ship-name {
+  color: #bae6fd;
+}
+
+.guide-ship-item.is-south .guide-ship-name {
+  color: #fecdd3;
+}
+
+.guide-ship-desc {
+  font-size: 0.73rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
 .guide-modal-footer {
   display: flex;
   align-items: center;
@@ -2825,6 +2883,11 @@ body {
   .guide-grid {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+
+  .guide-ship-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .guide-modal {
