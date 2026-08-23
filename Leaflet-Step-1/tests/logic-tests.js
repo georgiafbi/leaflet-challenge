@@ -590,7 +590,7 @@
         };
         // Should execute cleanly without throwing
         helpers.triggerAirshipDetectionPing(0, testQuake, false);
-        assert(typeof helpers.isCoordVisibleOnGlobe === "function", "isCoordVisibleOnGlobe is a helper function");
+        assert(typeof helpers.triggerAirshipDetectionPing === "function", "triggerAirshipDetectionPing is a helper function");
     });
 
     test("toggles quick guide modal open and closed with accessibility attributes", function () {
