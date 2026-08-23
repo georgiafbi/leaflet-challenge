@@ -2330,15 +2330,81 @@ function getAirshipGeoJSON(positions) {
     };
 }
 
+var airship3DMarkers = [];
+
 function initAirshipModule() {
-    if (!globeMap || !globeMap.getSource("airship")) return;
+    if (!globeMap) return;
+
+    // Clean up existing 3D markers if any
+    airship3DMarkers.forEach(function (inst) {
+        if (inst.marker) inst.marker.remove();
+        if (inst.renderer) inst.renderer.dispose();
+    });
+    airship3DMarkers = [];
+
+    // Create live Three.js 3D markers for all fleet vessels
+    if (window.THREE) {
+        SATELLITE_FLEET.forEach(function (vessel, vIdx) {
+            var el = document.createElement("div");
+            el.className = "airship-3d-marker";
+            el.title = vessel.name + " (" + vessel.tier + ")";
+            el.setAttribute("role", "button");
+            el.setAttribute("aria-label", vessel.name + " 3D Airship Expedition");
+
+            var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(120, 70);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.shadowMap.enabled = false;
+            el.appendChild(renderer.domElement);
+
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(40, 120 / 70, 0.1, 100);
+            camera.position.set(0, 1.2, 10.5);
+
+            // Lighting
+            var amb = new THREE.AmbientLight(0xfff7ed, 1.35);
+            scene.add(amb);
+
+            var sun = new THREE.DirectionalLight(0xffeedd, 2.2);
+            sun.position.set(15, 25, 20);
+            scene.add(sun);
+
+            var fill = new THREE.DirectionalLight(vIdx === 1 ? 0x38bdf8 : (vIdx === 2 ? 0xfb7185 : 0xf59e0b), 0.85);
+            fill.position.set(-15, -8, -10);
+            scene.add(fill);
+
+            var model = build3DAirshipMesh(THREE, vIdx);
+            if (model) {
+                scene.add(model.group);
+            }
+
+            var marker = new maplibregl.Marker({ element: el, anchor: "center" })
+                .setLngLat([0, 0])
+                .addTo(globeMap);
+
+            el.addEventListener("click", function (e) {
+                e.stopPropagation();
+                showAirshipPopup(marker.getLngLat(), vIdx);
+            });
+
+            airship3DMarkers.push({
+                vIdx: vIdx,
+                el: el,
+                renderer: renderer,
+                scene: scene,
+                camera: camera,
+                model: model,
+                marker: marker
+            });
+        });
+    }
 
     function stepFlight(timestamp) {
         if (!airshipLastTime) airshipLastTime = timestamp;
         var elapsed = timestamp - airshipLastTime;
         airshipLastTime = timestamp;
+        var dt = Math.min(elapsed / 1000, 0.1);
 
-        // Satellite orbital cruise: 1 full orbit around the planet in 120 seconds (2 minutes)
         if (airshipVisible) {
             airshipProgress = (airshipProgress + (elapsed / 120000)) % 1.0;
             var positions = getAllAirshipPositions(airshipProgress);
@@ -2346,6 +2412,38 @@ function initAirshipModule() {
             if (src) {
                 src.setData(getAirshipGeoJSON(positions));
             }
+
+            // Update live 3D Three.js markers
+            var mapBearing = (globeMap.getBearing && globeMap.getBearing()) || 0;
+            var t = timestamp * 0.001;
+
+            airship3DMarkers.forEach(function (inst) {
+                var pos = positions[inst.vIdx] || positions[0];
+                inst.marker.setLngLat([pos.lon, pos.lat]);
+                inst.el.style.display = "block";
+
+                if (inst.model) {
+                    // Propeller rotation
+                    inst.model.props.forEach(function (p) { p.rotation.x += dt * 45; });
+
+                    // Steam exhaust particles
+                    inst.model.exhaustParticles.forEach(function (ep, i) {
+                        ep.mesh.position.x = -1.0 - ((t * 2.5 + i * 0.5) % 2.5);
+                        var fade = 1.0 - (Math.abs(ep.mesh.position.x + 1.0) / 2.5);
+                        ep.mesh.scale.setScalar(0.8 + (1.0 - fade) * 1.5);
+                        ep.mesh.material.opacity = Math.max(0, fade * 0.45);
+                    });
+
+                    // 3D orientation: align model with flight heading & camera angle
+                    var relBearing = ((pos.bearing - mapBearing + 540) % 360) - 180;
+                    var rad = (relBearing * Math.PI) / 180;
+                    inst.model.group.rotation.y = -rad + Math.PI / 2;
+                    inst.model.group.rotation.z = Math.sin(t * 1.8 + inst.vIdx) * 0.08;
+                    inst.model.group.position.y = Math.sin(t * 1.4 + inst.vIdx) * 0.2;
+
+                    inst.renderer.render(inst.scene, inst.camera);
+                }
+            });
 
             var primary = positions[followedVesselIndex] || positions[0];
 
@@ -2367,6 +2465,10 @@ function initAirshipModule() {
                     easing: function (x) { return x; }
                 });
             }
+        } else {
+            airship3DMarkers.forEach(function (inst) {
+                inst.el.style.display = "none";
+            });
         }
 
         airshipAnimFrameId = requestAnimationFrame(stepFlight);
@@ -2380,10 +2482,13 @@ function setAirshipVisibility(visible) {
     airshipVisible = Boolean(visible);
     if (!globeMap) return;
     var visStr = airshipVisible ? "visible" : "none";
-    ["airship-orbit-path", "airship-searchlight", "airship-symbol"].forEach(function (layerId) {
+    ["airship-orbit-path", "airship-searchlight"].forEach(function (layerId) {
         if (globeMap.getLayer(layerId)) {
             globeMap.setLayoutProperty(layerId, "visibility", visStr);
         }
+    });
+    airship3DMarkers.forEach(function (inst) {
+        inst.el.style.display = airshipVisible ? "block" : "none";
     });
     if (!airshipVisible && isFollowingAirship) {
         toggleFollowAirship(false);
@@ -2458,21 +2563,28 @@ function soundSteamWhistle() {
     }
 }
 
-function build3DAirshipMesh(THREE) {
+function build3DAirshipMesh(THREE, vesselIdx) {
     if (!THREE) return null;
+    var vIdx = typeof vesselIdx === "number" ? vesselIdx : 0;
     var ship = new THREE.Group();
+
+    // Fleet Color Theme: 0 = Amber Gold (Northern), 1 = Cerulean Cyan (Equatorial), 2 = Royal Ruby (Southern)
+    var envelopeColor = vIdx === 1 ? 0x0284c7 : (vIdx === 2 ? 0xe11d48 : 0xd97706);
+    var emissiveColor = vIdx === 1 ? 0x082f49 : (vIdx === 2 ? 0x4c0519 : 0x451a03);
+    var trimColor = vIdx === 1 ? 0xe0f2fe : (vIdx === 2 ? 0xfecdd3 : 0xfef08a);
+    var lanternColor = vIdx === 1 ? 0x38bdf8 : (vIdx === 2 ? 0xfb7185 : 0xf59e0b);
 
     // Materials
     var goldEnvelopeMat = new THREE.MeshStandardMaterial({
-        color: 0xd97706,
+        color: envelopeColor,
         roughness: 0.24,
         metalness: 0.88,
-        emissive: 0x451a03,
+        emissive: emissiveColor,
         emissiveIntensity: 0.25
     });
 
     var brightBrassMat = new THREE.MeshStandardMaterial({
-        color: 0xfef08a,
+        color: trimColor,
         roughness: 0.15,
         metalness: 0.96
     });
@@ -2500,7 +2612,7 @@ function build3DAirshipMesh(THREE) {
     var windowGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
     var lanternGlassMat = new THREE.MeshStandardMaterial({
         color: 0xfef08a,
-        emissive: 0xf59e0b,
+        emissive: lanternColor,
         emissiveIntensity: 1.6,
         transparent: true,
         opacity: 0.88
@@ -4172,43 +4284,6 @@ function createMap() {
                 "circle-stroke-width": 1.5,
                 "circle-stroke-color": "rgba(250, 204, 21, 0.65)"
             }
-        });
-
-        // Victorian Airship Symbol Layer
-        globeMap.addLayer({
-            id: "airship-symbol",
-            type: "symbol",
-            source: "airship",
-            layout: {
-                "icon-image": "victorian-airship",
-                "icon-size": [
-                    "interpolate", ["linear"], ["zoom"],
-                    1, 0.62,
-                    3, 0.76,
-                    6, 1.05,
-                    9, 1.35
-                ],
-                "icon-rotate": ["get", "iconHeading"],
-                "icon-rotation-alignment": "map",
-                "icon-pitch-alignment": "map",
-                "icon-allow-overlap": true,
-                "icon-ignore-placement": true,
-                "visibility": airshipVisible ? "visible" : "none"
-            }
-        });
-
-        globeMap.on("click", "airship-symbol", function (event) {
-            var feature = event.features && event.features[0];
-            if (!feature) return;
-            var vIdx = (feature.properties && typeof feature.properties.vesselIdx === "number") ? feature.properties.vesselIdx : 0;
-            showAirshipPopup(event.lngLat, vIdx);
-        });
-
-        globeMap.on("mouseenter", "airship-symbol", function () {
-            globeMap.getCanvas().style.cursor = "pointer";
-        });
-        globeMap.on("mouseleave", "airship-symbol", function () {
-            globeMap.getCanvas().style.cursor = "";
         });
 
         initAirshipModule();
