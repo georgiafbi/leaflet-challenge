@@ -2308,6 +2308,362 @@ function soundSteamWhistle() {
     }
 }
 
+function build3DAirshipMesh(THREE) {
+    if (!THREE) return null;
+    var ship = new THREE.Group();
+
+    // 1. Gas Envelope (Streamlined Zeppelin Hull)
+    var hullGeo = new THREE.SphereGeometry(2.2, 64, 40);
+    var posAttr = hullGeo.attributes.position;
+    for (var i = 0; i < posAttr.count; i++) {
+        var x = posAttr.getX(i);
+        var y = posAttr.getY(i);
+        var z = posAttr.getZ(i);
+
+        x = x * 2.6;
+        if (x < 0) {
+            var taper = 1.0 + (x / 7.0) * 0.48;
+            y *= Math.max(0.18, taper);
+            z *= Math.max(0.18, taper);
+        } else {
+            var noseTaper = 1.0 - (x / 6.5) * 0.18;
+            y *= Math.max(0.28, noseTaper);
+            z *= Math.max(0.28, noseTaper);
+        }
+        posAttr.setXYZ(i, x, y, z);
+    }
+    hullGeo.computeVertexNormals();
+
+    var hullMat = new THREE.MeshStandardMaterial({
+        color: 0xca8a04,
+        roughness: 0.28,
+        metalness: 0.85,
+        emissive: 0x451a03,
+        emissiveIntensity: 0.25
+    });
+    var hullMesh = new THREE.Mesh(hullGeo, hullMat);
+    ship.add(hullMesh);
+
+    // Gilded Nose Cap
+    var noseCapGeo = new THREE.SphereGeometry(0.65, 24, 24);
+    var noseCapMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.15, metalness: 0.98 });
+    var noseCap = new THREE.Mesh(noseCapGeo, noseCapMat);
+    noseCap.position.set(5.3, -0.1, 0);
+    noseCap.scale.set(1.2, 0.9, 0.9);
+    ship.add(noseCap);
+
+    // 2. Brass Girders & Rib Rings
+    var ringMat = new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        roughness: 0.2,
+        metalness: 0.95
+    });
+
+    var ringPositions = [-4.0, -2.6, -1.2, 0.2, 1.6, 3.0, 4.2];
+    ringPositions.forEach(function (xPos) {
+        var factor = Math.cos((xPos / 6.0) * (Math.PI / 2.2));
+        var r = 2.22 * Math.max(0.25, factor);
+        var ringGeo = new THREE.TorusGeometry(r, 0.04, 12, 48);
+        var ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.position.x = xPos;
+        ringMesh.rotation.y = Math.PI / 2;
+        ship.add(ringMesh);
+    });
+
+    // Longitudinal Rib Lines (8 around perimeter)
+    for (var r = 0; r < 8; r++) {
+        var angle = (r * Math.PI * 2) / 8;
+        var curvePoints = [];
+        for (var step = -5.0; step <= 5.2; step += 0.5) {
+            var factor = Math.cos((step / 6.0) * (Math.PI / 2.2));
+            var rad = 2.23 * Math.max(0.22, factor);
+            curvePoints.push(new THREE.Vector3(step, Math.sin(angle) * rad, Math.cos(angle) * rad));
+        }
+        var curve = new THREE.CatmullRomCurve3(curvePoints);
+        var tubeGeo = new THREE.TubeGeometry(curve, 32, 0.025, 6, false);
+        var ribMesh = new THREE.Mesh(tubeGeo, ringMat);
+        ship.add(ribMesh);
+    }
+
+    // Astrolabe Observation Dome atop Hull
+    var domeGeo = new THREE.SphereGeometry(0.55, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    var domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+    var domeMesh = new THREE.Mesh(domeGeo, domeMat);
+    domeMesh.position.set(0.6, 2.18, 0);
+    ship.add(domeMesh);
+
+    // 3. Tail Empennage (Victorian Cross Fins)
+    var finMat = new THREE.MeshStandardMaterial({
+        color: 0x9a3412,
+        roughness: 0.35,
+        metalness: 0.8
+    });
+
+    // Vertical Fins (Top & Bottom)
+    [-1, 1].forEach(function (dir) {
+        var finShape = new THREE.Shape();
+        finShape.moveTo(-2.5, 0);
+        finShape.lineTo(-5.3, dir * 1.9);
+        finShape.lineTo(-4.3, dir * 1.9);
+        finShape.lineTo(-1.5, 0);
+        finShape.closePath();
+
+        var extrudeSettings = { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 };
+        var finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
+        var finMesh = new THREE.Mesh(finGeo, finMat);
+        finMesh.position.z = -0.04;
+        ship.add(finMesh);
+
+        var lightGeo = new THREE.SphereGeometry(0.12, 16, 16);
+        var lightMat = new THREE.MeshBasicMaterial({ color: dir > 0 ? 0xef4444 : 0x10b981 });
+        var lightMesh = new THREE.Mesh(lightGeo, lightMat);
+        lightMesh.position.set(-5.1, dir * 1.9, 0);
+        ship.add(lightMesh);
+    });
+
+    // Horizontal Fins (Port & Starboard)
+    [-1, 1].forEach(function (dir) {
+        var hFinShape = new THREE.Shape();
+        hFinShape.moveTo(-2.5, 0);
+        hFinShape.lineTo(-5.3, dir * 1.9);
+        hFinShape.lineTo(-4.3, dir * 1.9);
+        hFinShape.lineTo(-1.5, 0);
+        hFinShape.closePath();
+
+        var extrudeSettings = { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 };
+        var hFinGeo = new THREE.ExtrudeGeometry(hFinShape, extrudeSettings);
+        var hFinMesh = new THREE.Mesh(hFinGeo, finMat);
+        hFinMesh.rotation.x = Math.PI / 2;
+        hFinMesh.position.y = 0.04;
+        ship.add(hFinMesh);
+    });
+
+    // 4. Underslung Mahogany Observation Gondola
+    var gondolaGeo = new THREE.BoxGeometry(3.8, 0.8, 1.0);
+    var gondolaMat = new THREE.MeshStandardMaterial({
+        color: 0x451a03,
+        roughness: 0.45,
+        metalness: 0.5
+    });
+    var gondolaMesh = new THREE.Mesh(gondolaGeo, gondolaMat);
+    gondolaMesh.position.set(0.5, -2.45, 0);
+    ship.add(gondolaMesh);
+
+    // Gondola Gilded Base & Windows
+    var gBaseGeo = new THREE.BoxGeometry(4.0, 0.12, 1.1);
+    var gBaseMesh = new THREE.Mesh(gBaseGeo, ringMat);
+    gBaseMesh.position.set(0.5, -2.85, 0);
+    ship.add(gBaseMesh);
+
+    var winGeo = new THREE.BoxGeometry(0.38, 0.38, 1.04);
+    var winMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    [-1.3, -0.7, -0.1, 0.5, 1.1, 1.7].forEach(function (wx) {
+        var winMesh = new THREE.Mesh(winGeo, winMat);
+        winMesh.position.set(0.5 + wx, -2.42, 0);
+        ship.add(winMesh);
+    });
+
+    // Gondola Suspension Struts
+    var strutMat = new THREE.MeshStandardMaterial({ color: 0x78350f, metalness: 0.85 });
+    [-1.1, -0.2, 0.8, 1.8].forEach(function (sx) {
+        var strutGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.55, 8);
+        var strutMeshL = new THREE.Mesh(strutGeo, strutMat);
+        strutMeshL.position.set(0.5 + sx, -2.0, 0.35);
+        ship.add(strutMeshL);
+        var strutMeshR = new THREE.Mesh(strutGeo, strutMat);
+        strutMeshR.position.set(0.5 + sx, -2.0, -0.35);
+        ship.add(strutMeshR);
+    });
+
+    // 5. Engine Nacelles & Twin Spinning Brass Propellers
+    var nacelleGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.9, 16);
+    var nacelleMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.3, metalness: 0.92 });
+    var propMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.15, metalness: 0.98 });
+    var props = [];
+    var exhaustParticles = [];
+
+    [-1, 1].forEach(function (side) {
+        var nacelle = new THREE.Mesh(nacelleGeo, nacelleMat);
+        nacelle.rotation.z = Math.PI / 2;
+        nacelle.position.set(-0.4, -1.2, side * 2.3);
+        ship.add(nacelle);
+
+        var bracketGeo = new THREE.CylinderGeometry(0.045, 0.045, 1.2, 8);
+        var bracket = new THREE.Mesh(bracketGeo, strutMat);
+        bracket.rotation.x = side * (Math.PI / 3.2);
+        bracket.position.set(-0.4, -1.55, side * 1.5);
+        ship.add(bracket);
+
+        var propGroup = new THREE.Group();
+        propGroup.position.set(-0.95, -1.2, side * 2.3);
+
+        var hubGeo = new THREE.SphereGeometry(0.14, 16, 16);
+        var hubMesh = new THREE.Mesh(hubGeo, propMat);
+        propGroup.add(hubMesh);
+
+        for (var b = 0; b < 3; b++) {
+            var bladeGeo = new THREE.BoxGeometry(0.03, 0.72, 0.14);
+            var bladeMesh = new THREE.Mesh(bladeGeo, propMat);
+            var bladeAngle = (b * Math.PI * 2) / 3;
+            bladeMesh.rotation.x = bladeAngle;
+            bladeMesh.rotation.y = 0.25;
+            bladeMesh.position.y = Math.sin(bladeAngle) * 0.36;
+            bladeMesh.position.z = Math.cos(bladeAngle) * 0.36;
+            propGroup.add(bladeMesh);
+        }
+
+        ship.add(propGroup);
+        props.push(propGroup);
+
+        var steamGeo = new THREE.SphereGeometry(0.15, 8, 8);
+        var steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 });
+        for (var s = 0; s < 4; s++) {
+            var steamP = new THREE.Mesh(steamGeo, steamMat);
+            steamP.position.set(-1.2 - s * 0.4, -1.0 + Math.random() * 0.2, side * 2.3 + (Math.random() - 0.5) * 0.2);
+            steamP.scale.setScalar(1.0 + s * 0.6);
+            ship.add(steamP);
+            exhaustParticles.push({ mesh: steamP, baseOffset: s, side: side });
+        }
+    });
+
+    // 6. Volumetric Searchlight Cone
+    var coneGeo = new THREE.ConeGeometry(2.8, 8.5, 32, 1, true);
+    var coneMat = new THREE.MeshBasicMaterial({
+        color: 0xfef08a,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+    var coneMesh = new THREE.Mesh(coneGeo, coneMat);
+    coneMesh.position.set(4.8, -5.8, 0);
+    coneMesh.rotation.z = -Math.PI / 3.2;
+    ship.add(coneMesh);
+
+    return { group: ship, props: props, exhaustParticles: exhaustParticles, coneMesh: coneMesh };
+}
+
+function init3DAirshipInspector(container) {
+    if (!window.THREE || !container) return null;
+    var canvas = container.querySelector("canvas");
+    if (!canvas) return null;
+
+    var width = container.clientWidth || 300;
+    var height = container.clientHeight || 155;
+
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+    camera.position.set(5.5, 3.2, 14.5);
+    camera.lookAt(0, -0.5, 0);
+
+    // Lights
+    var ambient = new THREE.AmbientLight(0xffedd5, 0.9);
+    scene.add(ambient);
+
+    var sun = new THREE.DirectionalLight(0xfffbeb, 2.0);
+    sun.position.set(15, 25, 20);
+    scene.add(sun);
+
+    var rim = new THREE.DirectionalLight(0x38bdf8, 1.1);
+    rim.position.set(-20, -10, -15);
+    scene.add(rim);
+
+    var airship3D = build3DAirshipMesh(THREE);
+    if (!airship3D) return null;
+
+    airship3D.group.position.set(0, 0, 0);
+    airship3D.group.rotation.y = -0.35;
+    scene.add(airship3D.group);
+
+    // Drag-to-rotate interaction
+    var isDragging = false;
+    var prevMouseX = 0;
+    var prevMouseY = 0;
+    var rotVelocityX = 0;
+    var rotVelocityY = 0;
+
+    function onPointerDown(e) {
+        isDragging = true;
+        prevMouseX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        prevMouseY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    }
+
+    function onPointerMove(e) {
+        if (!isDragging) return;
+        var clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        var clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+        var dx = clientX - prevMouseX;
+        var dy = clientY - prevMouseY;
+        prevMouseX = clientX;
+        prevMouseY = clientY;
+
+        airship3D.group.rotation.y += dx * 0.012;
+        airship3D.group.rotation.x = Math.max(-0.6, Math.min(0.6, airship3D.group.rotation.x + dy * 0.01));
+    }
+
+    function onPointerUp() {
+        isDragging = false;
+    }
+
+    container.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    container.addEventListener("touchstart", onPointerDown, { passive: true });
+    window.addEventListener("touchmove", onPointerMove, { passive: true });
+    window.addEventListener("touchend", onPointerUp);
+
+    var animId = null;
+    var clock = new THREE.Clock();
+
+    function renderLoop() {
+        animId = requestAnimationFrame(renderLoop);
+        var dt = clock.getDelta();
+        var t = clock.getElapsedTime();
+
+        // Spin 3D propellers
+        airship3D.props.forEach(function (p) {
+            p.rotation.x += dt * 38.0;
+        });
+
+        // Steam particle drift
+        airship3D.exhaustParticles.forEach(function (ep, idx) {
+            ep.mesh.position.x = -1.0 - ((t * 2.5 + idx * 0.5) % 2.5);
+            var fade = 1.0 - (Math.abs(ep.mesh.position.x + 1.0) / 2.5);
+            ep.mesh.scale.setScalar(0.8 + (1.0 - fade) * 1.6);
+            ep.mesh.material.opacity = Math.max(0, fade * 0.5);
+        });
+
+        // Gentle automatic cruise bobbing if not dragging
+        if (!isDragging) {
+            airship3D.group.rotation.y += dt * 0.15;
+            airship3D.group.position.y = Math.sin(t * 1.5) * 0.25;
+            airship3D.group.rotation.z = Math.sin(t * 0.8) * 0.05;
+        }
+
+        renderer.render(scene, camera);
+    }
+    renderLoop();
+
+    return {
+        destroy: function () {
+            if (animId) cancelAnimationFrame(animId);
+            container.removeEventListener("mousedown", onPointerDown);
+            window.removeEventListener("mousemove", onPointerMove);
+            window.removeEventListener("mouseup", onPointerUp);
+            container.removeEventListener("touchstart", onPointerDown);
+            window.removeEventListener("touchmove", onPointerMove);
+            window.removeEventListener("touchend", onPointerUp);
+            renderer.dispose();
+        }
+    };
+}
+
 function showAirshipPopup(lngLat) {
     if (!globeMap) return;
     var pos = getAirshipPosition(airshipProgress);
@@ -2328,6 +2684,15 @@ function showAirshipPopup(lngLat) {
         <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Vent">💨</div>
     `;
     popupContent.appendChild(header);
+
+    // 3D Realtime Airship Inspector Viewport
+    var viewport3D = document.createElement("div");
+    viewport3D.className = "airship-3d-viewport";
+    viewport3D.innerHTML = `
+        <canvas id="airship-popup-3d-canvas"></canvas>
+        <div class="airship-3d-badge">⚙️ 3D Model Inspector · Drag to Rotate</div>
+    `;
+    popupContent.appendChild(viewport3D);
 
     var grid = document.createElement("div");
     grid.className = "airship-gauge-grid";
@@ -2394,7 +2759,15 @@ function showAirshipPopup(lngLat) {
         .setDOMContent(popupContent)
         .addTo(globeMap);
 
+    var inspectorInstance = null;
+    setTimeout(function () {
+        inspectorInstance = init3DAirshipInspector(viewport3D);
+    }, 50);
+
     airshipActivePopup.on("close", function () {
+        if (inspectorInstance && inspectorInstance.destroy) {
+            inspectorInstance.destroy();
+        }
         airshipActivePopup = null;
     });
 }
@@ -3708,6 +4081,8 @@ window.earthquakeApp.test = {
     getFilteredFeatures: getFilteredFeatures,
     setTectonicPlatesVisibility: setTectonicPlatesVisibility,
     createAirshipImage: createAirshipImage,
+    build3DAirshipMesh: build3DAirshipMesh,
+    init3DAirshipInspector: init3DAirshipInspector,
     getAirshipPosition: getAirshipPosition,
     setAirshipVisibility: setAirshipVisibility,
     toggleFollowAirship: toggleFollowAirship,

@@ -545,6 +545,17 @@
         assert(imgData && imgData.width === 240 && imgData.height === 120, "airship canvas returns 240x120 high-DPI image");
     });
 
+    test("verifies Three.js 3D Victorian dirigible model construction", function () {
+        if (window.THREE) {
+            var model = helpers.build3DAirshipMesh(window.THREE);
+            assert(model && model.group, "3D airship group generated");
+            assert(model.group.children.length >= 8, "has hull, nose cap, fins, ribs, gondola, and engines");
+            assert(Array.isArray(model.props) && model.props.length === 2, "has twin 3D propellers");
+            assert(Array.isArray(model.exhaustParticles) && model.exhaustParticles.length >= 4, "has steam exhaust particles");
+            assert(model.coneMesh, "has volumetric searchlight cone");
+        }
+    });
+
     var failed = results.filter(function (result) { return !result.passed; });
     var list = document.getElementById("results");
     results.forEach(function (result) {
