@@ -2387,8 +2387,9 @@ function initAirshipModule() {
                 flyBtn.title = primary.name + " (" + primary.tier + ") · Over " + primary.currentWaypoint;
             }
 
-            // Update camera if follow mode is active
-            if (isFollowingAirship && globeMap) {
+            // Update camera if follow mode is active. Skip while a flyTo ease
+            // is running so the approach animation isn't cancelled mid-flight.
+            if (isFollowingAirship && globeMap && !(typeof globeMap.isEasing === "function" && globeMap.isEasing())) {
                 globeMap.jumpTo({
                     center: [primary.lon, primary.lat]
                 });
@@ -2442,7 +2443,11 @@ function toggleFollowAirship(forcedState, targetVesselIdx) {
         }
         var pos = getAirshipPosition(airshipProgress, followedVesselIndex);
         if (globeMap) {
-            globeMap.flyTo({ center: [pos.lon, pos.lat], zoom: 4.5, speed: 1.2 });
+            // Lead the target: aim where the vessel will be when the fly
+            // animation lands (progress advances by elapsed/42000 per frame).
+            var flyDurationMs = 2000;
+            var predicted = getAirshipPosition(airshipProgress + (flyDurationMs / 42000), followedVesselIndex) || pos;
+            globeMap.flyTo({ center: [predicted.lon, predicted.lat], zoom: 4.5, duration: flyDurationMs, essential: true });
         }
     }
 }
@@ -3364,14 +3369,11 @@ function flyToAirship() {
     setAirshipVisibility(true);
     var airshipInput = document.getElementById("airship-visibility");
     if (airshipInput) airshipInput.checked = true;
-    var pos = getAirshipPosition(airshipProgress);
-    globeMap.flyTo({
-        center: [pos.lon, pos.lat],
-        zoom: 4.8,
-        speed: 1.4,
-        essential: true
-    });
-    showAirshipPopup([pos.lon, pos.lat]);
+    // The fleet orbits the globe in ~42 s, so a one-shot flyTo always lands
+    // where the ship used to be. Engage follow mode so the camera locks onto
+    // the moving vessel, then open its expedition drawer.
+    toggleFollowAirship(true, followedVesselIndex);
+    showAirshipPopup(null, followedVesselIndex);
 }
 
 function applyDepthFilters() {
