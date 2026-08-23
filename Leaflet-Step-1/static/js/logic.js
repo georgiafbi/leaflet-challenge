@@ -2136,6 +2136,10 @@ function createAirshipImage(vesselIdx) {
     return ctx.getImageData(0, 0, width, height);
 }
 
+// The fleet flies in three squadrons. Each flagship (indices 0-2, matching the
+// squadron/theme index) leads two smaller escort ships that patrol between the
+// major parallels — Arctic Circle to Tropic of Cancer, the tropics, and Tropic
+// of Capricorn to the Antarctic Circle — staggered in longitude and speed.
 var SATELLITE_FLEET = [
     {
         id: "north",
@@ -2149,6 +2153,7 @@ var SATELLITE_FLEET = [
         latPhase: 0.0,
         nodeLonDeg: -60.0,
         speedFactor: 1.0,
+        scale: 0.55,
         altitude: "420 km (Low Earth Orbit · 3,850 m Equivalent)",
         speed: "7.66 km/s (27,600 km/h · 48 knots Cruise)",
         color: "#fbbf24"
@@ -2165,6 +2170,7 @@ var SATELLITE_FLEET = [
         latPhase: Math.PI / 3,
         nodeLonDeg: 60.0,
         speedFactor: 0.95,
+        scale: 0.55,
         altitude: "410 km (Low Earth Orbit · 3,850 m Equivalent)",
         speed: "7.68 km/s (27,650 km/h · 48 knots Cruise)",
         color: "#38bdf8"
@@ -2181,13 +2187,125 @@ var SATELLITE_FLEET = [
         latPhase: (Math.PI * 2) / 3,
         nodeLonDeg: 180.0,
         speedFactor: 1.05,
+        scale: 0.55,
         altitude: "430 km (Low Earth Orbit · 3,850 m Equivalent)",
         speed: "7.64 km/s (27,500 km/h · 48 knots Cruise)",
+        color: "#f43f5e"
+    },
+    // --- Northern Squadron Escorts (Arctic Circle ↔ Tropic of Cancer) ---
+    {
+        id: "north-escort-1",
+        vesselIdx: 0,
+        name: "HMS Borealis",
+        registry: "No. 1895-A1",
+        tier: "Subarctic Patrol Orbit",
+        region: "Northern Hemisphere",
+        baseLat: 55.0,
+        latAmplitude: 4.0,
+        latPhase: Math.PI / 5,
+        nodeLonDeg: 75.0,
+        speedFactor: 0.9,
+        scale: 0.4,
+        altitude: "435 km (Low Earth Orbit · Aurora Watch Station)",
+        speed: "7.62 km/s (27,430 km/h · 44 knots Cruise)",
+        color: "#fbbf24"
+    },
+    {
+        id: "north-escort-2",
+        vesselIdx: 0,
+        name: "HMS Cirrus",
+        registry: "No. 1895-A2",
+        tier: "Tropic of Cancer Patrol",
+        region: "Northern Hemisphere",
+        baseLat: 22.0,
+        latAmplitude: 3.0,
+        latPhase: (Math.PI * 4) / 5,
+        nodeLonDeg: -170.0,
+        speedFactor: 1.12,
+        scale: 0.4,
+        altitude: "405 km (Low Earth Orbit · Monsoon Observatory)",
+        speed: "7.7 km/s (27,720 km/h · 52 knots Cruise)",
+        color: "#fbbf24"
+    },
+    // --- Equatorial Squadron Escorts (between the Tropics) ---
+    {
+        id: "equator-escort-1",
+        vesselIdx: 1,
+        name: "HMS Zephyrine",
+        registry: "No. 1895-B1",
+        tier: "North Trade Wind Patrol",
+        region: "Equatorial Zone",
+        baseLat: 10.0,
+        latAmplitude: 2.5,
+        latPhase: Math.PI,
+        nodeLonDeg: -75.0,
+        speedFactor: 1.08,
+        scale: 0.4,
+        altitude: "415 km (Low Earth Orbit · Ring of Fire Watch)",
+        speed: "7.69 km/s (27,680 km/h · 50 knots Cruise)",
+        color: "#38bdf8"
+    },
+    {
+        id: "equator-escort-2",
+        vesselIdx: 1,
+        name: "HMS Monsoon",
+        registry: "No. 1895-B2",
+        tier: "South Trade Wind Patrol",
+        region: "Equatorial Zone",
+        baseLat: -10.0,
+        latAmplitude: 2.5,
+        latPhase: (Math.PI * 7) / 4,
+        nodeLonDeg: 150.0,
+        speedFactor: 0.88,
+        scale: 0.4,
+        altitude: "425 km (Low Earth Orbit · Sunda Arc Survey)",
+        speed: "7.63 km/s (27,470 km/h · 45 knots Cruise)",
+        color: "#38bdf8"
+    },
+    // --- Southern Squadron Escorts (Tropic of Capricorn ↔ Antarctic Circle) ---
+    {
+        id: "south-escort-1",
+        vesselIdx: 2,
+        name: "HMS Notus",
+        registry: "No. 1895-C1",
+        tier: "Tropic of Capricorn Patrol",
+        region: "Southern Hemisphere",
+        baseLat: -22.0,
+        latAmplitude: 3.0,
+        latPhase: Math.PI / 2,
+        nodeLonDeg: -20.0,
+        speedFactor: 1.1,
+        scale: 0.4,
+        altitude: "410 km (Low Earth Orbit · Andes Cordillera Watch)",
+        speed: "7.7 km/s (27,700 km/h · 51 knots Cruise)",
+        color: "#f43f5e"
+    },
+    {
+        id: "south-escort-2",
+        vesselIdx: 2,
+        name: "HMS Antipodes",
+        registry: "No. 1895-C2",
+        tier: "Subantarctic Patrol Orbit",
+        region: "Southern Hemisphere",
+        baseLat: -52.0,
+        latAmplitude: 4.0,
+        latPhase: (Math.PI * 5) / 4,
+        nodeLonDeg: 95.0,
+        speedFactor: 0.92,
+        scale: 0.4,
+        altitude: "440 km (Low Earth Orbit · Drake Passage Sentinel)",
+        speed: "7.6 km/s (27,360 km/h · 43 knots Cruise)",
         color: "#f43f5e"
     }
 ];
 
 var followedVesselIndex = 0;
+
+// Squadron/theme index (0 north · 1 equator · 2 south) for any fleet position.
+function getFleetThemeIndex(fleetIdx) {
+    var vessel = SATELLITE_FLEET[fleetIdx];
+    return vessel && typeof vessel.vesselIdx === "number" ? vessel.vesselIdx : 0;
+}
 
 function calculateVesselCoordinates(vessel, progress) {
     var u = ((progress * vessel.speedFactor % 1.0) + 1.0) % 1.0;
@@ -2224,10 +2342,13 @@ function buildAirshipOrbitGeoJSON() {
     var steps = 180;
 
     SATELLITE_FLEET.forEach(function (vessel) {
+        // Draw the full closed track independent of orbital speed, otherwise
+        // slower ships (speedFactor < 1) would get truncated orbit lines.
+        var trackVessel = Object.assign({}, vessel, { speedFactor: 1.0 });
         var coords = [];
         for (var s = 0; s <= steps; s++) {
             var u = s / steps;
-            var pt = calculateVesselCoordinates(vessel, u);
+            var pt = calculateVesselCoordinates(trackVessel, u);
             coords.push([pt.lon, pt.lat]);
         }
 
@@ -2283,6 +2404,7 @@ function getAirshipPosition(progress, vesselIdx) {
     return {
         id: vessel.id,
         vesselIdx: idx,
+        themeIdx: getFleetThemeIndex(idx),
         name: vessel.name,
         registry: vessel.registry,
         tier: vessel.tier,
@@ -2338,6 +2460,7 @@ function getAirshipGeoJSON(positions) {
                 properties: {
                     id: state.id,
                     vesselIdx: state.vesselIdx,
+                    themeIdx: typeof state.themeIdx === "number" ? state.themeIdx : 0,
                     name: state.name,
                     registry: state.registry,
                     tier: state.tier,
@@ -2389,6 +2512,7 @@ function initAirshipModule() {
     // Create live Three.js 3D markers for all fleet vessels
     if (window.THREE) {
         SATELLITE_FLEET.forEach(function (vessel, vIdx) {
+            var themeIdx = getFleetThemeIndex(vIdx);
             var el = document.createElement("div");
             el.className = "airship-3d-marker";
             el.title = vessel.name + " (" + vessel.tier + ")";
@@ -2427,9 +2551,10 @@ function initAirshipModule() {
             rimBacklight.position.set(-20, 18, -15);
             scene.add(rimBacklight);
 
-            var model = build3DAirshipMesh(THREE, vIdx);
+            // Escorts share their squadron flagship's livery at a smaller scale.
+            var model = build3DAirshipMesh(THREE, themeIdx);
             if (model) {
-                model.group.scale.setScalar(0.55);
+                model.group.scale.setScalar(vessel.scale || 0.55);
                 scene.add(model.group);
             }
 
@@ -2444,6 +2569,7 @@ function initAirshipModule() {
 
             airship3DMarkers.push({
                 vIdx: vIdx,
+                themeIdx: themeIdx,
                 el: el,
                 innerEl: innerEl,
                 renderer: renderer,
@@ -2692,6 +2818,10 @@ function soundSteamWhistle(targetVesselIdx) {
         if (!airshipAudioCtx) return;
 
         var vIdx = typeof targetVesselIdx === "number" ? targetVesselIdx : (typeof followedVesselIndex === "number" ? followedVesselIndex : 0);
+        // Fleet positions above 2 are escorts; they blow their squadron's whistle.
+        if (vIdx > 2) {
+            vIdx = getFleetThemeIndex(vIdx);
+        }
         var profile = AIRSHIP_WHISTLE_PROFILES[vIdx] || AIRSHIP_WHISTLE_PROFILES[0];
 
         var now = airshipAudioCtx.currentTime;
@@ -2772,15 +2902,19 @@ function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
         soundSteamWhistle(vIdx);
     }
 
-    // Set active depth ping for WebGL globe layer
-    activePingVessels[vIdx] = {
-        pingColor: pingColor,
-        endTime: performance.now() + 4500
-    };
+    // Set active depth ping on the WebGL globe layer for the entire squadron
+    SATELLITE_FLEET.forEach(function (vessel, fleetIdx) {
+        if (getFleetThemeIndex(fleetIdx) === vIdx) {
+            activePingVessels[fleetIdx] = {
+                pingColor: pingColor,
+                endTime: performance.now() + 4500
+            };
+        }
+    });
 
-    // Apply visual ping to the live 3D map marker
+    // Apply visual ping to every live 3D marker in the squadron
     airship3DMarkers.forEach(function (inst) {
-        if (inst.vIdx === vIdx) {
+        if (inst.themeIdx === vIdx) {
             var targetEl = inst.innerEl || inst.el;
             targetEl.style.setProperty("--ping-depth-color", pingColor);
             targetEl.classList.remove("is-depth-pinging");
@@ -2798,8 +2932,8 @@ function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
         }
     });
 
-    // Update active 3D drawer inspector if open on this ship
-    if (activeDrawer3DInspector && activeDrawer3DInspector.model && followedVesselIndex === vIdx) {
+    // Update active 3D drawer inspector if open on a ship of this squadron
+    if (activeDrawer3DInspector && activeDrawer3DInspector.model && getFleetThemeIndex(followedVesselIndex) === vIdx) {
         var m = activeDrawer3DInspector.model;
         if (m.lanternLight && m.lanternGlassMat) {
             m.currentPingColor = colorHex;
@@ -3461,6 +3595,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
     if (!globeMap) return;
     var vIdx = typeof targetVesselIdx === "number" ? targetVesselIdx : followedVesselIndex;
     followedVesselIndex = vIdx;
+    var themeIdx = getFleetThemeIndex(vIdx);
     var pos = getAirshipPosition(airshipProgress, vIdx);
 
     var drawer = document.getElementById("airship-drawer");
@@ -3501,7 +3636,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
 
         drawer.querySelectorAll(".airship-fleet-tab").forEach(function (tab) {
             var tIdx = parseInt(tab.getAttribute("data-vessel"), 10);
-            tab.classList.toggle("is-active", tIdx === vIdx);
+            tab.classList.toggle("is-active", tIdx === themeIdx);
         });
 
         var followBtn = document.getElementById("airship-drawer-follow-btn");
@@ -3512,7 +3647,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
 
         var whistleBtn = document.getElementById("airship-drawer-whistle-btn");
         if (whistleBtn) {
-            var whistleProf = AIRSHIP_WHISTLE_PROFILES[vIdx] || AIRSHIP_WHISTLE_PROFILES[0];
+            var whistleProf = AIRSHIP_WHISTLE_PROFILES[themeIdx] || AIRSHIP_WHISTLE_PROFILES[0];
             whistleBtn.title = "Blow " + pos.name + "'s " + whistleProf.title;
         }
 
@@ -3524,7 +3659,7 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
                 activeDrawer3DInspector.destroy();
             }
             setTimeout(function () {
-                activeDrawer3DInspector = init3DAirshipInspector(vp, vIdx);
+                activeDrawer3DInspector = init3DAirshipInspector(vp, themeIdx);
             }, 50);
         }
         return;
@@ -4687,7 +4822,7 @@ function createMap() {
                 layout: {
                     "icon-image": [
                         "match",
-                        ["get", "vesselIdx"],
+                        ["coalesce", ["get", "themeIdx"], ["get", "vesselIdx"]],
                         1, "victorian-airship-1",
                         2, "victorian-airship-2",
                         "victorian-airship-0"
@@ -4697,7 +4832,7 @@ function createMap() {
                     "icon-pitch-alignment": "map",
                     "icon-allow-overlap": true,
                     "icon-ignore-placement": true,
-                    "icon-size": 0.44,
+                    "icon-size": ["case", [">", ["coalesce", ["get", "vesselIdx"], 0], 2], 0.32, 0.44],
                     "visibility": airshipVisible ? "visible" : "none"
                 }
             });
@@ -4726,6 +4861,11 @@ function createMap() {
 
         if (currentGeojson.features.length) {
             refreshEarthquakeSource();
+            // The USGS feed often arrives before the airship markers exist, so
+            // the initial detection ping was lost. Re-arm and replay it now
+            // that the fleet can actually light its depth beacons (no whistle).
+            lastSignaledQuakeIds = { 0: null, 1: null, 2: null };
+            checkRegionalEarthquakePings(currentGeojson.features, true);
         }
 
         ["mousedown", "touchstart", "wheel", "dblclick"].forEach(function (eventName) {
@@ -4829,12 +4969,15 @@ function fetchEarthquakePages(startTime, endTime, seq, controller, offset, accum
         });
 }
 
-function loadEarthquakeData(rangeKey) {
+function loadEarthquakeData(rangeKey, options) {
+    var silent = Boolean(options && options.silent);
     var preset = typeof rangeKey === "number" ? getRangePresetFromSlider(rangeKey) : getRangePresetByKey(rangeKey);
     currentRange = preset.key;
-    updateRangeControls(currentRange);
-    setPillState("loading", preset.label);
-    clearQuakeSelection();
+    if (!silent) {
+        updateRangeControls(currentRange);
+        setPillState("loading", preset.label);
+        clearQuakeSelection();
+    }
 
     if (activeRequestController) {
         activeRequestController.abort();
@@ -4858,7 +5001,14 @@ function loadEarthquakeData(rangeKey) {
             markRegionalChampions(features);
 
             var isInitialFeed = !hasSuccessfulFeed;
-            selectedQuakeId = null;
+            if (silent && selectedQuakeId) {
+                // Keep the user's current selection highlighted across refreshes.
+                features.forEach(function (feature) {
+                    feature.properties.isSelected = getQuakeIdentity(feature) === selectedQuakeId;
+                });
+            } else {
+                selectedQuakeId = null;
+            }
             currentGeojson = { type: "FeatureCollection", features: features };
             lastSuccessfulRange = preset.key;
             hasSuccessfulFeed = true;
@@ -4879,6 +5029,9 @@ function loadEarthquakeData(rangeKey) {
             }
 
             console.error("Failed to load earthquake data:", error);
+            if (silent) {
+                return; // Background refreshes fail quietly; existing data stays live.
+            }
             if (hasSuccessfulFeed) {
                 currentRange = lastSuccessfulRange;
                 updateRangeControls(currentRange);
@@ -4892,6 +5045,25 @@ function loadEarthquakeData(rangeKey) {
                 activeRequestController = null;
             }
         });
+}
+
+// Silent live-refresh loop: keeps the feed current so the airship fleet can
+// detect and signal fresh earthquakes in their zones (whistle + depth ping).
+var FEED_REFRESH_INTERVAL_MS = 60000;
+var feedRefreshTimer = null;
+
+function startFeedAutoRefresh() {
+    if (feedRefreshTimer) {
+        window.clearInterval(feedRefreshTimer);
+    }
+    feedRefreshTimer = window.setInterval(function () {
+        // Skip when the tab is hidden, a request is already in flight,
+        // or a timelapse is replaying history.
+        if (document.hidden || activeRequestController || isTimelapsePlaying || !hasSuccessfulFeed) {
+            return;
+        }
+        loadEarthquakeData(currentRange, { silent: true });
+    }, FEED_REFRESH_INTERVAL_MS);
 }
 
 function wireStatCard(valueId, title, action) {
@@ -4972,6 +5144,8 @@ window.earthquakeApp.test = {
     triggerAirshipDetectionPing: triggerAirshipDetectionPing,
     checkRegionalEarthquakePings: checkRegionalEarthquakePings,
     isCoordVisibleOnGlobe: isCoordVisibleOnGlobe,
+    SATELLITE_FLEET: SATELLITE_FLEET,
+    getFleetThemeIndex: getFleetThemeIndex,
     airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,
@@ -5233,4 +5407,5 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     loadEarthquakeData(currentRange);
+    startFeedAutoRefresh();
 });

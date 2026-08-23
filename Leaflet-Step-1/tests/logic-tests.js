@@ -593,6 +593,43 @@
         assert(typeof helpers.triggerAirshipDetectionPing === "function", "triggerAirshipDetectionPing is a helper function");
     });
 
+    test("organizes the airship fleet into three squadrons of flagship plus escorts", function () {
+        var fleet = helpers.SATELLITE_FLEET;
+        assert(Array.isArray(fleet) && fleet.length === 9, "fleet has nine ships");
+
+        // Flagships hold positions 0-2 and match their squadron theme index.
+        [0, 1, 2].forEach(function (idx) {
+            assertEqual(fleet[idx].vesselIdx, idx, "flagship " + idx + " leads its own squadron");
+            assertEqual(helpers.getFleetThemeIndex(idx), idx, "flagship theme index matches position");
+        });
+
+        // Each squadron fields exactly three ships, escorts are smaller.
+        [0, 1, 2].forEach(function (squadron) {
+            var ships = fleet.filter(function (v) { return v.vesselIdx === squadron; });
+            assertEqual(ships.length, 3, "squadron " + squadron + " has three ships");
+        });
+        fleet.forEach(function (vessel, idx) {
+            if (idx > 2) {
+                assert(vessel.scale < fleet[vessel.vesselIdx].scale, vessel.name + " escort is smaller than its flagship");
+                assertEqual(helpers.getFleetThemeIndex(idx), vessel.vesselIdx, vessel.name + " resolves its squadron theme");
+                // Escorts must patrol inside their squadron's detection zone even
+                // at maximum latitude wander.
+                var minLat = vessel.baseLat - vessel.latAmplitude;
+                var maxLat = vessel.baseLat + vessel.latAmplitude;
+                assertEqual(helpers.getAirshipVesselForLatitude(minLat), vessel.vesselIdx, vessel.name + " southern edge stays in zone");
+                assertEqual(helpers.getAirshipVesselForLatitude(maxLat), vessel.vesselIdx, vessel.name + " northern edge stays in zone");
+            }
+        });
+
+        // Every ship reports a valid moving position.
+        fleet.forEach(function (vessel, idx) {
+            var pos = helpers.getAirshipPosition(0.37, idx);
+            assertEqual(pos.name, vessel.name, "position " + idx + " reports " + vessel.name);
+            assert(Number.isFinite(pos.lon) && Number.isFinite(pos.lat), vessel.name + " has valid coordinates");
+            assertEqual(pos.themeIdx, vessel.vesselIdx, vessel.name + " carries its squadron theme");
+        });
+    });
+
     test("toggles quick guide modal open and closed with accessibility attributes", function () {
         var backdrop = document.getElementById("guide-modal-backdrop");
         if (!backdrop) {
