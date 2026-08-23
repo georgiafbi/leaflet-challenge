@@ -1266,25 +1266,37 @@ function updateRotationControl() {
 
 function setAutoRotate(enabled) {
     autoRotate = Boolean(enabled);
+    if (autoRotate && isFollowingAirship) {
+        toggleFollowAirship(false);
+    }
     updateRotationControl();
     if (autoRotate) {
         startAutoRotate();
     }
 }
 
+var lastSpinTimestamp = null;
+
 function startAutoRotate() {
     if (rotationAnimationId !== null || !autoRotate || !globeMap) {
         return;
     }
+    lastSpinTimestamp = null;
 
-    function spin() {
-        if (!autoRotate || !globeMap) {
+    function spin(timestamp) {
+        if (!autoRotate || !globeMap || isFollowingAirship) {
             rotationAnimationId = null;
+            lastSpinTimestamp = null;
             return;
         }
+        if (!lastSpinTimestamp) lastSpinTimestamp = timestamp;
+        var elapsed = timestamp - lastSpinTimestamp;
+        lastSpinTimestamp = timestamp;
+        var dt = Math.min(elapsed / 1000, 0.1);
+
         var center = globeMap.getCenter();
-        var step = compactViewportQuery.matches ? 0.18 : 0.09;
-        center.lng += step;
+        var degPerSec = compactViewportQuery.matches ? 10.0 : 5.0;
+        center.lng += degPerSec * dt;
         globeMap.jumpTo({ center: center });
         rotationAnimationId = requestAnimationFrame(spin);
     }
@@ -2469,12 +2481,10 @@ function initAirshipModule() {
                 flyBtn.title = primary.name + " (" + primary.tier + ") · Over " + primary.currentWaypoint;
             }
 
-            // Update camera if follow mode is active
+            // Update camera if follow mode is active (use jumpTo for instantaneous synchronous lock without animation queue jitter)
             if (isFollowingAirship && globeMap) {
-                globeMap.easeTo({
-                    center: [primary.lon, primary.lat],
-                    duration: 100,
-                    easing: function (x) { return x; }
+                globeMap.jumpTo({
+                    center: [primary.lon, primary.lat]
                 });
             }
         } else {
@@ -2523,6 +2533,14 @@ function toggleFollowAirship(forcedState, targetVesselIdx) {
         followBtn.textContent = isFollowingAirship ? "🛰️ Track " + v.name + " (Active)" : "🛰️ Track " + v.name;
     }
     if (isFollowingAirship) {
+        if (autoRotate) {
+            autoRotate = false;
+            updateRotationControl();
+        }
+        if (rotationAnimationId !== null) {
+            cancelAnimationFrame(rotationAnimationId);
+            rotationAnimationId = null;
+        }
         var pos = getAirshipPosition(airshipProgress, followedVesselIndex);
         if (globeMap) {
             globeMap.flyTo({ center: [pos.lon, pos.lat], zoom: 4.5, speed: 1.2 });
