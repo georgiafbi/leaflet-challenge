@@ -388,6 +388,7 @@ body {
   color: #bae6fd;
   font-size: 0.68rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .base-panel-content {
@@ -956,7 +957,7 @@ body {
   .base-panel {
     top: 8px;
     right: 8px;
-    width: 112px;
+    width: 132px;
     padding: 2px 10px;
     border-radius: 12px;
   }
@@ -1292,7 +1293,7 @@ body {
   .base-panel {
     top: 8px;
     right: 8px;
-    width: 112px;
+    width: 132px;
     padding: 2px 10px;
     border-radius: 12px;
   }
