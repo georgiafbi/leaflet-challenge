@@ -3032,113 +3032,103 @@ function init3DAirshipInspector(container) {
     };
 }
 
+var activeDrawer3DInspector = null;
+
+function closeAirshipDrawer() {
+    var drawer = document.getElementById("airship-drawer");
+    if (drawer) {
+        drawer.hidden = true;
+    }
+    if (activeDrawer3DInspector && activeDrawer3DInspector.destroy) {
+        activeDrawer3DInspector.destroy();
+        activeDrawer3DInspector = null;
+    }
+}
+
 function showAirshipPopup(lngLat, targetVesselIdx) {
     if (!globeMap) return;
     var vIdx = typeof targetVesselIdx === "number" ? targetVesselIdx : followedVesselIndex;
     followedVesselIndex = vIdx;
     var pos = getAirshipPosition(airshipProgress, vIdx);
 
+    var drawer = document.getElementById("airship-drawer");
+    if (drawer) {
+        var feedDrawer = document.getElementById("feed-drawer");
+        if (feedDrawer) feedDrawer.hidden = true;
+
+        var nameEl = document.getElementById("airship-drawer-name");
+        if (nameEl) nameEl.textContent = pos.name;
+
+        var tierEl = document.getElementById("airship-drawer-tier");
+        if (tierEl) tierEl.textContent = pos.tier.replace(" Zonal Orbit", "");
+
+        var subEl = document.getElementById("airship-drawer-sub");
+        if (subEl) subEl.textContent = pos.registry + " · 420 km LEO";
+
+        var speedEl = document.getElementById("airship-drawer-speed");
+        if (speedEl) speedEl.textContent = "7.66 km/s";
+
+        var trackEl = document.getElementById("airship-drawer-track");
+        if (trackEl) trackEl.textContent = pos.headingCompass;
+
+        var altEl = document.getElementById("airship-drawer-alt");
+        if (altEl) altEl.textContent = "420 km LEO";
+
+        var coordsEl = document.getElementById("airship-drawer-coords");
+        if (coordsEl) {
+            var latStr = pos.lat > 0 ? pos.lat.toFixed(1) + "°N" : Math.abs(pos.lat).toFixed(1) + "°S";
+            var lonStr = pos.lon > 0 ? pos.lon.toFixed(1) + "°E" : Math.abs(pos.lon).toFixed(1) + "°W";
+            coordsEl.textContent = latStr + ", " + lonStr;
+        }
+
+        var wpEl = document.getElementById("airship-drawer-waypoint");
+        if (wpEl) wpEl.textContent = pos.currentWaypoint;
+
+        var noteEl = document.getElementById("airship-drawer-note");
+        if (noteEl) noteEl.textContent = "“" + pos.note + "”";
+
+        drawer.querySelectorAll(".airship-fleet-tab").forEach(function (tab) {
+            var tIdx = parseInt(tab.getAttribute("data-vessel"), 10);
+            tab.classList.toggle("is-active", tIdx === vIdx);
+        });
+
+        var followBtn = document.getElementById("airship-drawer-follow-btn");
+        if (followBtn) {
+            followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
+            followBtn.textContent = isFollowingAirship ? "🛰️ Lock Camera" : "🛰️ Track Orbit";
+        }
+
+        drawer.hidden = false;
+
+        var vp = drawer.querySelector(".airship-3d-viewport");
+        if (vp) {
+            if (activeDrawer3DInspector && activeDrawer3DInspector.destroy) {
+                activeDrawer3DInspector.destroy();
+            }
+            setTimeout(function () {
+                activeDrawer3DInspector = init3DAirshipInspector(vp);
+            }, 50);
+        }
+        return;
+    }
+
+    // Graceful fallback for test or minimal environments
     var popupContent = document.createElement("div");
     popupContent.className = "airship-popup";
-
-    var header = document.createElement("div");
-    header.className = "airship-popup-header";
-    header.innerHTML = `
-        <div class="airship-title-wrap">
-            <span class="airship-insignia">🛰️</span>
-            <div>
-                <div class="airship-title-row">
-                    <span class="airship-name">${pos.name}</span>
-                    <span class="airship-tier-tag">${pos.tier.replace(" Zonal Orbit", "")}</span>
+    popupContent.innerHTML = `
+        <div class="airship-popup-header">
+            <div class="airship-title-wrap">
+                <span class="airship-insignia">🛰️</span>
+                <div>
+                    <div class="airship-title-row">
+                        <span class="airship-name">${pos.name}</span>
+                        <span class="airship-tier-tag">${pos.tier.replace(" Zonal Orbit", "")}</span>
+                    </div>
+                    <p class="airship-subtitle">${pos.registry} · 420 km LEO</p>
                 </div>
-                <p class="airship-subtitle">${pos.registry} · 420 km LEO</p>
             </div>
         </div>
-        <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Whistle">💨</div>
     `;
-    popupContent.appendChild(header);
-
-    // Fleet Constellation Tab Selector
-    var fleetTabs = document.createElement("div");
-    fleetTabs.className = "airship-fleet-tabs";
-    fleetTabs.innerHTML = `
-        <button type="button" class="airship-fleet-tab ${vIdx === 0 ? "is-active" : ""}" data-vessel="0">North (36°N)</button>
-        <button type="button" class="airship-fleet-tab ${vIdx === 1 ? "is-active" : ""}" data-vessel="1">Equator (0°)</button>
-        <button type="button" class="airship-fleet-tab ${vIdx === 2 ? "is-active" : ""}" data-vessel="2">South (35°S)</button>
-    `;
-    popupContent.appendChild(fleetTabs);
-
-    fleetTabs.querySelectorAll(".airship-fleet-tab").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            var selectedIdx = parseInt(btn.getAttribute("data-vessel"), 10);
-            var nextPos = getAirshipPosition(airshipProgress, selectedIdx);
-            showAirshipPopup([nextPos.lon, nextPos.lat], selectedIdx);
-            if (isFollowingAirship) {
-                globeMap.flyTo({ center: [nextPos.lon, nextPos.lat], zoom: 4.5, speed: 1.2 });
-            }
-        });
-    });
-
-    // 3D Realtime Airship Inspector Viewport (Compact)
-    var viewport3D = document.createElement("div");
-    viewport3D.className = "airship-3d-viewport";
-    viewport3D.innerHTML = `
-        <canvas id="airship-popup-3d-canvas"></canvas>
-        <div class="airship-3d-badge">⚙️ 3D Model · Drag to Rotate</div>
-    `;
-    popupContent.appendChild(viewport3D);
-
-    var grid = document.createElement("div");
-    grid.className = "airship-gauge-grid";
-    grid.innerHTML = `
-        <div class="airship-gauge">
-            <span class="gauge-label">Speed</span>
-            <strong class="gauge-val">7.66 km/s</strong>
-        </div>
-        <div class="airship-gauge">
-            <span class="gauge-label">Track</span>
-            <strong class="gauge-val">${pos.headingCompass}</strong>
-        </div>
-        <div class="airship-gauge">
-            <span class="gauge-label">Alt</span>
-            <strong class="gauge-val">420 km LEO</strong>
-        </div>
-        <div class="airship-gauge">
-            <span class="gauge-label">Sub-Sat Fix</span>
-            <strong class="gauge-val">${pos.lat > 0 ? pos.lat.toFixed(1) + "°N" : Math.abs(pos.lat).toFixed(1) + "°S"}, ${pos.lon > 0 ? pos.lon.toFixed(1) + "°E" : Math.abs(pos.lon).toFixed(1) + "°W"}</strong>
-        </div>
-    `;
-    popupContent.appendChild(grid);
-
-    var dispatch = document.createElement("div");
-    dispatch.className = "airship-dispatch-card";
-    dispatch.innerHTML = `
-        <p class="dispatch-title"><span class="dispatch-tag">OVERFLIGHT</span> ${pos.currentWaypoint}</p>
-        <p class="dispatch-note">“${pos.note}”</p>
-    `;
-    popupContent.appendChild(dispatch);
-
-    var actions = document.createElement("div");
-    actions.className = "airship-actions";
-
-    var followBtn = document.createElement("button");
-    followBtn.id = "airship-follow-btn";
-    followBtn.type = "button";
-    followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
-    followBtn.textContent = isFollowingAirship ? "🛰️ Lock Camera" : "🛰️ Track Orbit";
-    followBtn.addEventListener("click", function () {
-        toggleFollowAirship(undefined, vIdx);
-    });
-    actions.appendChild(followBtn);
-
-    var whistleBtn = document.createElement("button");
-    whistleBtn.type = "button";
-    whistleBtn.className = "airship-btn airship-btn-whistle";
-    whistleBtn.textContent = "💨 Whistle";
-    whistleBtn.addEventListener("click", soundSteamWhistle);
-    actions.appendChild(whistleBtn);
-
-    popupContent.appendChild(actions);
 
     if (airshipActivePopup) {
         airshipActivePopup.remove();
@@ -3148,18 +3138,6 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
         .setLngLat(lngLat || [pos.lon, pos.lat])
         .setDOMContent(popupContent)
         .addTo(globeMap);
-
-    var inspectorInstance = null;
-    setTimeout(function () {
-        inspectorInstance = init3DAirshipInspector(viewport3D);
-    }, 50);
-
-    airshipActivePopup.on("close", function () {
-        if (inspectorInstance && inspectorInstance.destroy) {
-            inspectorInstance.destroy();
-        }
-        airshipActivePopup = null;
-    });
 }
 
 function flyToAirship() {
@@ -4669,12 +4647,47 @@ document.addEventListener("DOMContentLoaded", function () {
         flyToQuake(highlightQuakes.latest);
     });
 
+    // Airship Drawer event wiring
+    var closeAirshipBtn = document.getElementById("close-airship-drawer");
+    if (closeAirshipBtn) {
+        closeAirshipBtn.addEventListener("click", closeAirshipDrawer);
+    }
+
+    var airshipDrawer = document.getElementById("airship-drawer");
+    if (airshipDrawer) {
+        airshipDrawer.querySelectorAll(".airship-fleet-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var selectedIdx = parseInt(btn.getAttribute("data-vessel"), 10);
+                showAirshipPopup(null, selectedIdx);
+                if (isFollowingAirship) {
+                    var nextPos = getAirshipPosition(airshipProgress, selectedIdx);
+                    globeMap.flyTo({ center: [nextPos.lon, nextPos.lat], zoom: 4.5, speed: 1.2 });
+                }
+            });
+        });
+    }
+
+    var airshipFollowBtn = document.getElementById("airship-drawer-follow-btn");
+    if (airshipFollowBtn) {
+        airshipFollowBtn.addEventListener("click", function () {
+            toggleFollowAirship(undefined, followedVesselIndex);
+            airshipFollowBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
+            airshipFollowBtn.textContent = isFollowingAirship ? "🛰️ Lock Camera" : "🛰️ Track Orbit";
+        });
+    }
+
+    var airshipWhistleBtn = document.getElementById("airship-drawer-whistle-btn");
+    if (airshipWhistleBtn) {
+        airshipWhistleBtn.addEventListener("click", soundSteamWhistle);
+    }
+
     document.addEventListener("keydown", function (event) {
         if (event.key === "Escape") {
             var drawer = document.getElementById("feed-drawer");
             if (drawer && !drawer.hidden) {
                 toggleFeedDrawer(false);
             }
+            closeAirshipDrawer();
         }
     });
 

@@ -119,6 +119,77 @@
           <p class="feed-drawer-empty">Loading earthquakes…</p>
         </div>
       </aside>
+
+      <!-- Orbital Airship Expedition Drawer -->
+      <aside id="airship-drawer" class="airship-drawer" aria-label="Orbital Airship Expedition" hidden>
+        <div class="airship-drawer-header">
+          <div class="airship-title-wrap">
+            <span class="airship-insignia">🛰️</span>
+            <div>
+              <div class="airship-title-row">
+                <h3 id="airship-drawer-name" class="airship-name">HMS Aetheria</h3>
+                <span id="airship-drawer-tier" class="airship-tier-tag">Northern</span>
+              </div>
+              <p id="airship-drawer-sub" class="airship-subtitle">No. 1894-A · 420 km LEO</p>
+            </div>
+          </div>
+          <div class="airship-drawer-controls">
+            <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Whistle">💨</div>
+            <button id="close-airship-drawer" class="airship-drawer-close" type="button" aria-label="Close airship panel">✕</button>
+          </div>
+        </div>
+
+        <div class="airship-drawer-body">
+          <!-- Fleet Constellation Tabs -->
+          <div class="airship-fleet-tabs">
+            <button type="button" class="airship-fleet-tab is-active" data-vessel="0">North (36°N)</button>
+            <button type="button" class="airship-fleet-tab" data-vessel="1">Equator (0°)</button>
+            <button type="button" class="airship-fleet-tab" data-vessel="2">South (35°S)</button>
+          </div>
+
+          <!-- 3D Model Viewport -->
+          <div class="airship-3d-viewport">
+            <canvas id="airship-drawer-3d-canvas"></canvas>
+            <div class="airship-3d-badge">⚙️ 3D Model · Drag to Rotate</div>
+          </div>
+
+          <!-- 2x2 Telemetry Grid -->
+          <div class="airship-gauge-grid">
+            <div class="airship-gauge">
+              <span class="gauge-label">Speed</span>
+              <strong id="airship-drawer-speed" class="gauge-val">7.66 km/s</strong>
+            </div>
+            <div class="airship-gauge">
+              <span class="gauge-label">Track</span>
+              <strong id="airship-drawer-track" class="gauge-val">087° E</strong>
+            </div>
+            <div class="airship-gauge">
+              <span class="gauge-label">Alt</span>
+              <strong id="airship-drawer-alt" class="gauge-val">420 km LEO</strong>
+            </div>
+            <div class="airship-gauge">
+              <span class="gauge-label">Sub-Sat Fix</span>
+              <strong id="airship-drawer-coords" class="gauge-val">38.4°N, 16.8°W</strong>
+            </div>
+          </div>
+
+          <!-- Overflight Chronicle -->
+          <div class="airship-dispatch-card">
+            <p class="dispatch-title"><span class="dispatch-tag">OVERFLIGHT</span> <span id="airship-drawer-waypoint">Azores Hotspot (North Atlantic)</span></p>
+            <p id="airship-drawer-note" class="dispatch-note">“Fair winds and clear skies; afternoon tea served on the bridge.”</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="airship-actions">
+            <button id="airship-drawer-follow-btn" type="button" class="airship-btn airship-btn-follow">
+              🛰️ Track Orbit
+            </button>
+            <button id="airship-drawer-whistle-btn" type="button" class="airship-btn airship-btn-whistle">
+              💨 Whistle
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
 
