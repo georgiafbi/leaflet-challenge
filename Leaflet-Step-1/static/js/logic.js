@@ -366,6 +366,14 @@ const countryAliases = {
     "IT": ["italy", "italian"]
 };
 
+const countryDisplayNames = {
+    "US": "United States", "GB": "United Kingdom", "NZ": "New Zealand", "PG": "Papua New Guinea",
+    "TR": "Türkiye", "DO": "Dominican Republic", "CD": "DR Congo", "AE": "United Arab Emirates",
+    "RU": "Russia", "IR": "Iran", "SY": "Syria", "KR": "South Korea", "KP": "North Korea",
+    "PH": "Philippines", "TW": "Taiwan", "ID": "Indonesia", "MX": "Mexico", "JP": "Japan",
+    "CL": "Chile", "PE": "Peru", "IS": "Iceland", "GR": "Greece", "IT": "Italy"
+};
+
 function resolveLocationTokens(place, countryName, countryCode, lon, lat) {
     var rawPlace = String(place || "").trim();
     var foundState = null;
@@ -374,10 +382,12 @@ function resolveLocationTokens(place, countryName, countryCode, lon, lat) {
     var resolvedCountryCode = countryCode || null;
     var aliases = new Set();
 
-    // Check US states in place (e.g. ", CA", ", California", "of Cobb, CA")
+    // Check US states in place (e.g. ", CA", ", California", "of Cobb, CA").
+    // Codes must be uppercase and follow a comma so words like "La Paz" or the
+    // compass token "NE" are not mistaken for Louisiana or Nebraska.
     for (var code in usStateMap) {
         var stateName = usStateMap[code];
-        var stateRegex = new RegExp("(?:,\\s*|\\b)" + code + "\\b", "i");
+        var stateRegex = new RegExp(",\\s*" + code + "\\b");
         var nameRegex = new RegExp("\\b" + stateName + "\\b", "i");
         if (stateRegex.test(rawPlace) || nameRegex.test(rawPlace)) {
             foundState = stateName;
@@ -394,7 +404,7 @@ function resolveLocationTokens(place, countryName, countryCode, lon, lat) {
     if (!foundState) {
         for (var pCode in canadianProvinceMap) {
             var provName = canadianProvinceMap[pCode];
-            var provRegex = new RegExp("(?:,\\s*|\\b)" + pCode + "\\b", "i");
+            var provRegex = new RegExp(",\\s*" + pCode + "\\b");
             var pNameRegex = new RegExp("\\b" + provName + "\\b", "i");
             if (provRegex.test(rawPlace) || pNameRegex.test(rawPlace)) {
                 foundState = provName;
@@ -417,7 +427,7 @@ function resolveLocationTokens(place, countryName, countryCode, lon, lat) {
                 var aRegex = new RegExp("(?:,\\s*|\\b)" + alias.replace(/\./g, "\\.") + "(?:\\b|$)", "i");
                 if (aRegex.test(rawPlace)) {
                     resolvedCountryCode = cCode;
-                    resolvedCountry = list[1] ? (list[1].charAt(0).toUpperCase() + list[1].slice(1)) : alias;
+                    resolvedCountry = countryDisplayNames[cCode] || alias;
                     break;
                 }
             }
@@ -930,7 +940,7 @@ function matchesSearchQuery(feature, query) {
         var term = parsed.terms[i];
         if (term.length === 2) {
             // For 2-letter codes (e.g. ca, ak, us, jp), match state/country code or word boundary
-            var wordRegex = new RegExp("(?:\\b|[^a-z0-9])" + term + "(?:\\b|[^a-z0-9])", "i");
+            var wordRegex = new RegExp("(?:\\b|[^a-z0-9])" + escapeRegExp(term) + "(?:\\b|[^a-z0-9])", "i");
             var stateCode = (props.stateCode || "").toLowerCase();
             var countryCode = (props.countryCode || "").toLowerCase();
             if (stateCode !== term && countryCode !== term && !wordRegex.test(index)) {
@@ -950,6 +960,10 @@ function escapeHtml(text) {
     var div = document.createElement("div");
     div.textContent = String(text || "");
     return div.innerHTML;
+}
+
+function escapeRegExp(text) {
+    return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function fitFeaturesBounds(features) {
@@ -1112,7 +1126,7 @@ function renderSearchSuggestions(query, matches) {
 
         var meta = document.createElement("div");
         meta.className = "search-item-meta";
-        var timeStr = formatEventTime(props.time);
+        var timeStr = formatRelativeTime(props.time);
         meta.textContent = (props.depth || "0") + " km depth · " + timeStr;
         textCol.appendChild(meta);
 
@@ -3212,6 +3226,20 @@ function init3DAirshipInspector(container, vesselIdx) {
             container.removeEventListener("touchstart", onPointerDown);
             window.removeEventListener("touchmove", onPointerMove);
             window.removeEventListener("touchend", onPointerUp);
+            // Free GPU resources so reopening the inspector does not leak memory.
+            scene.traverse(function (child) {
+                if (child.geometry && typeof child.geometry.dispose === "function") {
+                    child.geometry.dispose();
+                }
+                if (child.material) {
+                    (Array.isArray(child.material) ? child.material : [child.material]).forEach(function (material) {
+                        if (material && typeof material.dispose === "function") {
+                            material.dispose();
+                        }
+                    });
+                }
+            });
+            scene.clear();
             renderer.dispose();
         }
     };
@@ -4633,6 +4661,7 @@ function loadEarthquakeData(rangeKey) {
 
             markRegionalChampions(features);
 
+            var isInitialFeed = !hasSuccessfulFeed;
             selectedQuakeId = null;
             currentGeojson = { type: "FeatureCollection", features: features };
             lastSuccessfulRange = preset.key;
@@ -4646,7 +4675,7 @@ function loadEarthquakeData(rangeKey) {
                 syncChampionPingMotion();
             }
 
-            checkRegionalEarthquakePings(features, !hasSuccessfulFeed);
+            checkRegionalEarthquakePings(features, isInitialFeed);
         })
         .catch(function (error) {
             if (seq !== requestSeq || error.name === "AbortError") {
@@ -4746,7 +4775,6 @@ window.earthquakeApp.test = {
     getAirshipVesselForLatitude: getAirshipVesselForLatitude,
     triggerAirshipDetectionPing: triggerAirshipDetectionPing,
     checkRegionalEarthquakePings: checkRegionalEarthquakePings,
-    isCoordVisibleOnGlobe: isCoordVisibleOnGlobe,
     airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,
