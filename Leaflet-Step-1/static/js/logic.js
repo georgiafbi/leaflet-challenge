@@ -2210,7 +2210,11 @@ function initAirshipModule() {
             // Update topbar airship badge if present
             var badge = document.getElementById("airship-status-pill");
             if (badge) {
-                badge.textContent = "🛸 HMS Aetheria · " + pos.currentWaypoint.split(" & ")[0];
+                badge.textContent = "HMS Aetheria";
+            }
+            var flyBtn = document.getElementById("fly-to-airship");
+            if (flyBtn) {
+                flyBtn.title = "HMS Aetheria · Overflying " + pos.currentWaypoint;
             }
 
             // Update camera if follow mode is active
@@ -2669,7 +2673,7 @@ function showAirshipPopup(lngLat) {
     var pos = getAirshipPosition(airshipProgress);
 
     var popupContent = document.createElement("div");
-    popupContent.className = "quake-popup airship-popup";
+    popupContent.className = "airship-popup";
 
     var header = document.createElement("div");
     header.className = "airship-popup-header";

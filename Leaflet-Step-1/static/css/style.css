@@ -1574,6 +1574,7 @@ body {
   background: rgba(180, 83, 9, 0.22) !important;
   border-color: rgba(245, 158, 11, 0.45) !important;
   color: #fef08a !important;
+  white-space: nowrap !important;
 }
 
 .airship-btn-indicator:hover {
@@ -1582,13 +1583,10 @@ body {
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
 }
 
-.airship-popup {
-  background: linear-gradient(145deg, rgba(28, 19, 10, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
-  border: 1px solid rgba(251, 191, 36, 0.45) !important;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.12) !important;
-  border-radius: 12px;
-  padding: 12px 14px;
-  color: #fef3c7;
+.airship-maplibre-popup {
+  max-width: 340px !important;
+  width: 340px !important;
+  z-index: 1000 !important;
 }
 
 .airship-maplibre-popup .maplibregl-popup-content {
@@ -1596,6 +1594,21 @@ body {
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  width: 100% !important;
+}
+
+.airship-popup {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: linear-gradient(145deg, rgba(28, 19, 10, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border: 1px solid rgba(251, 191, 36, 0.45) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.12) !important;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #fef3c7;
+  width: 330px;
+  box-sizing: border-box;
 }
 
 .airship-popup-header {
@@ -1603,8 +1616,9 @@ body {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(251, 191, 36, 0.25);
-  padding-bottom: 8px;
-  margin-bottom: 10px;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  width: 100%;
 }
 
 .airship-title-wrap {
@@ -1614,7 +1628,7 @@ body {
 }
 
 .airship-insignia {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
   animation: gearSpin 12s linear infinite;
 }
@@ -1626,16 +1640,16 @@ body {
 
 .airship-popup-header h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: #fef08a;
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
 .airship-subtitle {
   margin: 1px 0 0;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: #d1d5db;
   font-style: italic;
   letter-spacing: 0.02em;
@@ -1661,14 +1675,14 @@ body {
 .airship-3d-viewport {
   position: relative;
   width: 100%;
-  height: 155px;
+  height: 130px;
   background: radial-gradient(circle at center, rgba(30, 41, 59, 0.85) 0%, rgba(2, 6, 23, 0.95) 100%);
   border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 10px;
-  margin-bottom: 10px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7);
   cursor: grab;
+  box-sizing: border-box;
 }
 
 .airship-3d-viewport:active {
@@ -1683,48 +1697,49 @@ body {
 
 .airship-3d-badge {
   position: absolute;
-  bottom: 6px;
+  bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(251, 191, 36, 0.4);
   color: #fde68a;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   pointer-events: none;
   white-space: nowrap;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .airship-gauge-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .airship-gauge {
   background: rgba(41, 37, 36, 0.65);
   border: 1px solid rgba(217, 119, 6, 0.35);
-  border-radius: 8px;
-  padding: 6px 8px;
+  border-radius: 7px;
+  padding: 5px 8px;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
 .gauge-label {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: #fbbf24;
   font-weight: 700;
 }
 
 .gauge-val {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
   color: #ffffff;
   white-space: nowrap;
@@ -1733,7 +1748,7 @@ body {
 }
 
 .gauge-sub {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   color: #9ca3af;
 }
 
@@ -1741,35 +1756,37 @@ body {
   background: rgba(24, 24, 27, 0.55);
   border-left: 3px solid #f59e0b;
   border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
+  padding: 7px 9px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dispatch-title {
-  margin: 0 0 4px;
-  font-size: 0.74rem;
+  margin: 0 0 3px;
+  font-size: 0.72rem;
   color: #fde68a;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .dispatch-note {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #e5e7eb;
   font-style: italic;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .airship-actions {
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
 .airship-btn {
   flex: 1;
   padding: 6px 10px;
   border-radius: 8px;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
   font: inherit;
@@ -1792,10 +1809,13 @@ body {
   color: #ffffff;
   box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
 }
-  display: flex;
+
+/* Magnitude Filter Group Base Styles */
+.mag-filters {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .mag-filter-label {
@@ -2142,17 +2162,22 @@ body {
 
   .mag-filters {
     flex: 1 1 100%;
-    display: grid;
-    grid-template-columns: auto repeat(5, 1fr);
+    display: flex;
     align-items: center;
     gap: 4px;
     width: 100%;
   }
 
+  .mag-filter-label {
+    display: none;
+  }
+
   .mag-filter-chip {
-    min-height: 34px;
-    padding: 0 4px;
-    font-size: clamp(0.62rem, 2.3vw, 0.72rem);
+    flex: 1;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0 2px;
+    font-size: clamp(0.65rem, 2.8vw, 0.76rem);
     text-align: center;
     width: 100%;
     box-sizing: border-box;
@@ -2162,12 +2187,28 @@ body {
     flex: 1 1 100%;
     display: flex;
     gap: 6px;
+    width: 100%;
   }
 
   .toolbar-btn {
     flex: 1;
+    min-width: 0;
     min-height: 34px;
     justify-content: center;
+    padding: 0 4px;
+    font-size: clamp(0.65rem, 2.6vw, 0.74rem);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .airship-maplibre-popup {
+    max-width: calc(100vw - 28px) !important;
+    width: calc(100vw - 28px) !important;
+  }
+
+  .airship-popup {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .stats-panel {
