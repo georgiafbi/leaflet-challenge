@@ -1882,7 +1882,7 @@ function createAirshipImage() {
 
     // 1. Gas Envelope Outer Glow / Atmospheric Shimmer
     var haloGrad = ctx.createRadialGradient(cx, cy - 2, 10, cx, cy - 2, 42);
-    haloGrad.addColorStop(0, "rgba(251, 191, 36, 0.25)");
+    haloGrad.addColorStop(0, "rgba(251, 191, 36, 0.3)");
     haloGrad.addColorStop(0.7, "rgba(245, 158, 11, 0.08)");
     haloGrad.addColorStop(1, "rgba(245, 158, 11, 0)");
     ctx.beginPath();
@@ -1890,8 +1890,7 @@ function createAirshipImage() {
     ctx.fillStyle = haloGrad;
     ctx.fill();
 
-    // 2. Tail Fins (Victorian Cross empennage)
-    // Top fin
+    // 2. Tail Empennage Fins
     ctx.beginPath();
     ctx.moveTo(cx - 32, cy - 6);
     ctx.lineTo(cx - 48, cy - 18);
@@ -1904,7 +1903,6 @@ function createAirshipImage() {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Bottom fin
     ctx.beginPath();
     ctx.moveTo(cx - 32, cy);
     ctx.lineTo(cx - 48, cy + 12);
@@ -1917,19 +1915,6 @@ function createAirshipImage() {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Stabilizer Wing
-    ctx.beginPath();
-    ctx.moveTo(cx - 22, cy - 3);
-    ctx.lineTo(cx - 44, cy - 4);
-    ctx.lineTo(cx - 42, cy - 1);
-    ctx.lineTo(cx - 20, cy - 1);
-    ctx.closePath();
-    ctx.fillStyle = "#d97706";
-    ctx.fill();
-    ctx.strokeStyle = "#fef08a";
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-
     // Stern Navigation Lights (Ruby & Emerald)
     ctx.beginPath();
     ctx.arc(cx - 48, cy - 18, 1.8, 0, Math.PI * 2);
@@ -1940,13 +1925,13 @@ function createAirshipImage() {
     ctx.fillStyle = "#10b981";
     ctx.fill();
 
-    // 3. Main Rigid Hull / Gas Envelope (Dirigible Body)
+    // 3. Main Golden Gas Envelope (Zeppelin Balloon)
     var hullGrad = ctx.createLinearGradient(cx - 40, cy - 18, cx + 40, cy + 12);
-    hullGrad.addColorStop(0, "#78350f"); // Bronze stern
-    hullGrad.addColorStop(0.2, "#b45309"); // Warm amber
-    hullGrad.addColorStop(0.45, "#fde68a"); // Golden highlight
-    hullGrad.addColorStop(0.7, "#d97706"); // Burnished brass
-    hullGrad.addColorStop(0.9, "#92400e"); // Nose cone
+    hullGrad.addColorStop(0, "#78350f");
+    hullGrad.addColorStop(0.2, "#b45309");
+    hullGrad.addColorStop(0.45, "#fde68a");
+    hullGrad.addColorStop(0.7, "#d97706");
+    hullGrad.addColorStop(0.9, "#92400e");
     hullGrad.addColorStop(1, "#f59e0b");
 
     ctx.beginPath();
@@ -1958,12 +1943,11 @@ function createAirshipImage() {
     ctx.closePath();
     ctx.fillStyle = hullGrad;
     ctx.fill();
-
     ctx.strokeStyle = "#451a03";
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // 4. Longitudinal Ribs & Ring Girders
+    // Longitudinal Ribs & Girders
     ctx.strokeStyle = "rgba(120, 53, 15, 0.4)";
     ctx.lineWidth = 0.9;
     [-9, -4, 1, 6].forEach(function (offsetY) {
@@ -1973,60 +1957,68 @@ function createAirshipImage() {
         ctx.stroke();
     });
 
-    ctx.strokeStyle = "rgba(254, 240, 138, 0.6)";
-    ctx.lineWidth = 0.8;
-    [-28, -16, -4, 8, 20, 29].forEach(function (posX) {
+    // Scalloped Drapery Swags on Gasbag (from Image 4)
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 0.9;
+    [-24, -10, 4, 18].forEach(function (sx) {
         ctx.beginPath();
-        var factor = Math.cos((posX / 38) * (Math.PI / 2.2));
-        var rh = 13 * Math.max(0.3, factor);
-        ctx.ellipse(cx + posX, cy - 3, 2.5, rh, 0, 0, Math.PI * 2);
+        ctx.moveTo(cx + sx, cy - 1);
+        ctx.quadraticCurveTo(cx + sx + 7, cy + 6, cx + sx + 14, cy - 1);
         ctx.stroke();
     });
 
-    // Specular Top Highlight
-    var specGrad = ctx.createLinearGradient(cx - 30, cy - 14, cx + 30, cy - 14);
-    specGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
-    specGrad.addColorStop(0.4, "rgba(255, 255, 255, 0.75)");
-    specGrad.addColorStop(0.7, "rgba(255, 255, 255, 0.65)");
-    specGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    // Forward Pinnacle Spear
     ctx.beginPath();
-    ctx.moveTo(cx - 30, cy - 12);
-    ctx.bezierCurveTo(cx - 10, cy - 15, cx + 15, cy - 15, cx + 30, cy - 7);
-    ctx.strokeStyle = specGrad;
-    ctx.lineWidth = 1.8;
+    ctx.moveTo(cx + 38, cy - 3);
+    ctx.lineTo(cx + 50, cy - 3);
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    // 5. Underslung Keel & Observation Gondola
-    ctx.strokeStyle = "#451a03";
-    ctx.lineWidth = 0.8;
-    [-18, -8, 2, 12, 22].forEach(function (sx) {
-        ctx.beginPath();
-        ctx.moveTo(cx + sx, cy + 7);
-        ctx.lineTo(cx + sx * 0.9, cy + 12);
-        ctx.stroke();
-    });
-
-    var gondolaGrad = ctx.createLinearGradient(cx - 16, cy + 12, cx + 22, cy + 18);
-    gondolaGrad.addColorStop(0, "#451a03");
-    gondolaGrad.addColorStop(0.5, "#78350f");
-    gondolaGrad.addColorStop(1, "#b45309");
+    // Top Mast & Swallowtail Pennant Flag ("THE AEONS VOYAGER")
+    ctx.beginPath();
+    ctx.moveTo(cx + 6, cy - 16);
+    ctx.lineTo(cx + 6, cy - 24);
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
 
     ctx.beginPath();
-    if (ctx.roundRect) {
-        ctx.roundRect(cx - 16, cy + 12, 38, 7, [2, 5, 2, 2]);
-    } else {
-        ctx.rect(cx - 16, cy + 12, 38, 7);
-    }
-    ctx.fillStyle = gondolaGrad;
+    ctx.moveTo(cx + 6, cy - 24);
+    ctx.lineTo(cx - 8, cy - 27);
+    ctx.lineTo(cx - 3, cy - 24);
+    ctx.lineTo(cx - 8, cy - 21);
+    ctx.closePath();
+    ctx.fillStyle = "#b45309";
     ctx.fill();
     ctx.strokeStyle = "#fef08a";
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 0.6;
     ctx.stroke();
 
-    // Portholes
-    [-12, -6, 0, 6, 12, 17].forEach(function (wx) {
+    // 4. Underslung Sailing Galleon Hull
+    var galleonGrad = ctx.createLinearGradient(cx - 24, cy + 12, cx + 26, cy + 20);
+    galleonGrad.addColorStop(0, "#451a03");
+    galleonGrad.addColorStop(0.5, "#78350f");
+    galleonGrad.addColorStop(1, "#b45309");
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 24, cy + 12); // Sterncastle deck
+    ctx.lineTo(cx - 24, cy + 18); // Stern keel
+    ctx.quadraticCurveTo(cx - 6, cy + 24, cx + 18, cy + 22); // Keel bottom
+    ctx.quadraticCurveTo(cx + 30, cy + 20, cx + 34, cy + 13); // High curved bow
+    ctx.lineTo(cx + 30, cy + 12); // Bow deck
+    ctx.quadraticCurveTo(cx + 4, cy + 8, cx - 24, cy + 12); // Sheer deck curve
+    ctx.closePath();
+    ctx.fillStyle = galleonGrad;
+    ctx.fill();
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+
+    // Aft Sterncastle Cabin Windows
+    [-18, -12].forEach(function (wx) {
         ctx.beginPath();
-        ctx.rect(cx + wx, cy + 13.5, 3.5, 3.5);
+        ctx.rect(cx + wx, cy + 10, 3.5, 3.5);
         ctx.fillStyle = "#fef08a";
         ctx.fill();
         ctx.strokeStyle = "#78350f";
@@ -2034,42 +2026,95 @@ function createAirshipImage() {
         ctx.stroke();
     });
 
-    // Forward Searchlight Housing
+    // Bowsprit Spar reaching forward from Prow
     ctx.beginPath();
-    ctx.arc(cx + 22, cy + 15.5, 2.5, -Math.PI / 2, Math.PI / 2);
-    ctx.fillStyle = "#facc15";
-    ctx.fill();
-    ctx.strokeStyle = "#78350f";
-    ctx.lineWidth = 0.6;
+    ctx.moveTo(cx + 32, cy + 14);
+    ctx.lineTo(cx + 48, cy + 6);
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // 6. Outrigger Engines & Twin Propellers
+    // Rigging Cables connecting Galleon to Gasbag
+    ctx.strokeStyle = "rgba(254, 240, 138, 0.7)";
+    ctx.lineWidth = 0.7;
+    [-20, -8, 4, 16, 26].forEach(function (sx) {
+        ctx.beginPath();
+        ctx.moveTo(cx + sx, cy + 11);
+        ctx.lineTo(cx + sx * 0.9, cy + 7);
+        ctx.stroke();
+    });
+
+    // 5. THE SIGNATURE HANGING GLOWING LANTERN
+    // Suspension Chain
     ctx.beginPath();
-    ctx.ellipse(cx - 4, cy + 6, 6, 2.8, 0, 0, Math.PI * 2);
+    ctx.moveTo(cx + 48, cy + 6);
+    ctx.lineTo(cx + 48, cy + 12);
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    // Lantern Body
+    ctx.beginPath();
+    ctx.rect(cx + 44, cy + 12, 8, 10);
+    ctx.fillStyle = "#fbbf24";
+    ctx.fill();
+    ctx.strokeStyle = "#78350f";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Inner Glowing Flame
+    ctx.beginPath();
+    ctx.arc(cx + 48, cy + 17, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+
+    // Radiant Golden Light Halo around Lantern & Forward Beam
+    var lanternHalo = ctx.createRadialGradient(cx + 48, cy + 17, 2, cx + 48, cy + 17, 20);
+    lanternHalo.addColorStop(0, "rgba(254, 240, 138, 0.85)");
+    lanternHalo.addColorStop(0.4, "rgba(245, 158, 11, 0.45)");
+    lanternHalo.addColorStop(1, "rgba(245, 158, 11, 0)");
+    ctx.beginPath();
+    ctx.arc(cx + 48, cy + 17, 20, 0, Math.PI * 2);
+    ctx.fillStyle = lanternHalo;
+    ctx.fill();
+
+    // Forward Searchlight Cone from Lantern
+    var beamGrad = ctx.createRadialGradient(cx + 48, cy + 17, 4, cx + 80, cy + 30, 40);
+    beamGrad.addColorStop(0, "rgba(254, 240, 138, 0.65)");
+    beamGrad.addColorStop(0.3, "rgba(251, 191, 36, 0.35)");
+    beamGrad.addColorStop(1, "rgba(251, 191, 36, 0)");
+    ctx.beginPath();
+    ctx.moveTo(cx + 48, cy + 17);
+    ctx.lineTo(cx + 90, cy + 10);
+    ctx.lineTo(cx + 80, cy + 45);
+    ctx.closePath();
+    ctx.fillStyle = beamGrad;
+    ctx.fill();
+
+    // 6. Propellers & Engines
+    // Stern Pusher Propeller
+    ctx.beginPath();
+    ctx.ellipse(cx - 26, cy + 15, 1.5, 6, 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(254, 240, 138, 0.85)";
+    ctx.fill();
+
+    // Outrigger Turbines & Steam
+    ctx.beginPath();
+    ctx.ellipse(cx - 2, cy + 7, 5, 2.5, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#292524";
     ctx.fill();
     ctx.strokeStyle = "#fbbf24";
     ctx.lineWidth = 0.7;
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.ellipse(cx - 10, cy + 6, 1.2, 5.5, 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(254, 240, 138, 0.75)";
-    ctx.fill();
-
-    // Exhaust Pipe & Steam
-    ctx.beginPath();
-    ctx.rect(cx - 2, cy + 2.5, 1.8, 2.5);
-    ctx.fillStyle = "#78716c";
-    ctx.fill();
-
-    var steamGrad = ctx.createRadialGradient(cx - 6, cy + 2, 0.5, cx - 12, cy + 1, 5);
+    // Steam Drift
+    var steamGrad = ctx.createRadialGradient(cx - 6, cy + 3, 0.5, cx - 14, cy + 2, 6);
     steamGrad.addColorStop(0, "rgba(255, 255, 255, 0.6)");
     steamGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.25)");
     steamGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.beginPath();
-    ctx.arc(cx - 7, cy + 2, 2.5, 0, Math.PI * 2);
-    ctx.arc(cx - 11, cy + 1, 3.5, 0, Math.PI * 2);
+    ctx.arc(cx - 8, cy + 3, 2.5, 0, Math.PI * 2);
+    ctx.arc(cx - 13, cy + 2, 4, 0, Math.PI * 2);
     ctx.fillStyle = steamGrad;
     ctx.fill();
 
@@ -2316,21 +2361,65 @@ function build3DAirshipMesh(THREE) {
     if (!THREE) return null;
     var ship = new THREE.Group();
 
-    // 1. Gas Envelope (Streamlined Zeppelin Hull)
-    var hullGeo = new THREE.SphereGeometry(2.2, 64, 40);
+    // Materials
+    var goldEnvelopeMat = new THREE.MeshStandardMaterial({
+        color: 0xd97706,
+        roughness: 0.24,
+        metalness: 0.88,
+        emissive: 0x451a03,
+        emissiveIntensity: 0.25
+    });
+
+    var brightBrassMat = new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        roughness: 0.15,
+        metalness: 0.96
+    });
+
+    var bronzeMat = new THREE.MeshStandardMaterial({
+        color: 0x92400e,
+        roughness: 0.35,
+        metalness: 0.85
+    });
+
+    var woodHullMat = new THREE.MeshStandardMaterial({
+        color: 0x451a03,
+        roughness: 0.5,
+        metalness: 0.25,
+        emissive: 0x1c0c04,
+        emissiveIntensity: 0.1
+    });
+
+    var woodDeckMat = new THREE.MeshStandardMaterial({
+        color: 0x78350f,
+        roughness: 0.6,
+        metalness: 0.2
+    });
+
+    var windowGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    var lanternGlassMat = new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 1.6,
+        transparent: true,
+        opacity: 0.88
+    });
+
+    // 1. TOP ZEPPELIN GASBAG (Balloon Envelope)
+    var hullGeo = new THREE.SphereGeometry(2.1, 64, 40);
     var posAttr = hullGeo.attributes.position;
     for (var i = 0; i < posAttr.count; i++) {
         var x = posAttr.getX(i);
         var y = posAttr.getY(i);
         var z = posAttr.getZ(i);
 
-        x = x * 2.6;
+        x = x * 2.5;
         if (x < 0) {
-            var taper = 1.0 + (x / 7.0) * 0.48;
+            var taper = 1.0 + (x / 6.8) * 0.45;
             y *= Math.max(0.18, taper);
             z *= Math.max(0.18, taper);
         } else {
-            var noseTaper = 1.0 - (x / 6.5) * 0.18;
+            var noseTaper = 1.0 - (x / 6.2) * 0.15;
             y *= Math.max(0.28, noseTaper);
             z *= Math.max(0.28, noseTaper);
         }
@@ -2338,213 +2427,387 @@ function build3DAirshipMesh(THREE) {
     }
     hullGeo.computeVertexNormals();
 
-    var hullMat = new THREE.MeshStandardMaterial({
-        color: 0xca8a04,
-        roughness: 0.28,
-        metalness: 0.85,
-        emissive: 0x451a03,
-        emissiveIntensity: 0.25
-    });
-    var hullMesh = new THREE.Mesh(hullGeo, hullMat);
+    var hullMesh = new THREE.Mesh(hullGeo, goldEnvelopeMat);
+    hullMesh.position.y = 1.4;
     ship.add(hullMesh);
 
-    // Gilded Nose Cap
-    var noseCapGeo = new THREE.SphereGeometry(0.65, 24, 24);
-    var noseCapMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.15, metalness: 0.98 });
-    var noseCap = new THREE.Mesh(noseCapGeo, noseCapMat);
-    noseCap.position.set(5.3, -0.1, 0);
-    noseCap.scale.set(1.2, 0.9, 0.9);
+    // Forward Pinnacle Spear & Cap
+    var noseCapGeo = new THREE.SphereGeometry(0.55, 20, 20);
+    var noseCap = new THREE.Mesh(noseCapGeo, brightBrassMat);
+    noseCap.position.set(5.1, 1.4, 0);
+    noseCap.scale.set(1.1, 0.8, 0.8);
     ship.add(noseCap);
 
-    // 2. Brass Girders & Rib Rings
-    var ringMat = new THREE.MeshStandardMaterial({
-        color: 0xfef08a,
-        roughness: 0.2,
-        metalness: 0.95
-    });
+    var spearGeo = new THREE.ConeGeometry(0.32, 2.4, 16);
+    var spearMesh = new THREE.Mesh(spearGeo, brightBrassMat);
+    spearMesh.rotation.z = -Math.PI / 2;
+    spearMesh.position.set(6.3, 1.4, 0);
+    ship.add(spearMesh);
 
-    var ringPositions = [-4.0, -2.6, -1.2, 0.2, 1.6, 3.0, 4.2];
-    ringPositions.forEach(function (xPos) {
+    // Circumferential Girders
+    [-3.8, -2.4, -1.0, 0.4, 1.8, 3.2, 4.3].forEach(function (xPos) {
         var factor = Math.cos((xPos / 6.0) * (Math.PI / 2.2));
-        var r = 2.22 * Math.max(0.25, factor);
-        var ringGeo = new THREE.TorusGeometry(r, 0.04, 12, 48);
-        var ringMesh = new THREE.Mesh(ringGeo, ringMat);
-        ringMesh.position.x = xPos;
+        var r = 2.12 * Math.max(0.25, factor);
+        var ringGeo = new THREE.TorusGeometry(r, 0.035, 10, 36);
+        var ringMesh = new THREE.Mesh(ringGeo, brightBrassMat);
+        ringMesh.position.set(xPos, 1.4, 0);
         ringMesh.rotation.y = Math.PI / 2;
         ship.add(ringMesh);
     });
 
-    // Longitudinal Rib Lines (8 around perimeter)
+    // Longitudinal Rib Tubes
     for (var r = 0; r < 8; r++) {
         var angle = (r * Math.PI * 2) / 8;
         var curvePoints = [];
-        for (var step = -5.0; step <= 5.2; step += 0.5) {
+        for (var step = -4.6; step <= 5.0; step += 0.5) {
             var factor = Math.cos((step / 6.0) * (Math.PI / 2.2));
-            var rad = 2.23 * Math.max(0.22, factor);
-            curvePoints.push(new THREE.Vector3(step, Math.sin(angle) * rad, Math.cos(angle) * rad));
+            var rad = 2.13 * Math.max(0.22, factor);
+            curvePoints.push(new THREE.Vector3(step, 1.4 + Math.sin(angle) * rad, Math.cos(angle) * rad));
         }
         var curve = new THREE.CatmullRomCurve3(curvePoints);
-        var tubeGeo = new THREE.TubeGeometry(curve, 32, 0.025, 6, false);
-        var ribMesh = new THREE.Mesh(tubeGeo, ringMat);
+        var tubeGeo = new THREE.TubeGeometry(curve, 28, 0.022, 6, false);
+        var ribMesh = new THREE.Mesh(tubeGeo, brightBrassMat);
         ship.add(ribMesh);
     }
 
-    // Astrolabe Observation Dome atop Hull
-    var domeGeo = new THREE.SphereGeometry(0.55, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    var domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
-    var domeMesh = new THREE.Mesh(domeGeo, domeMat);
-    domeMesh.position.set(0.6, 2.18, 0);
-    ship.add(domeMesh);
-
-    // 3. Tail Empennage (Victorian Cross Fins)
-    var finMat = new THREE.MeshStandardMaterial({
-        color: 0x9a3412,
-        roughness: 0.35,
-        metalness: 0.8
+    // Decorative Scalloped Drapery Swags (from Image 4)
+    [-1, 1].forEach(function (side) {
+        for (var s = -3.2; s <= 2.6; s += 1.4) {
+            var swagPoints = [
+                new THREE.Vector3(s, 1.4, side * 2.1),
+                new THREE.Vector3(s + 0.7, 0.7, side * 2.15),
+                new THREE.Vector3(s + 1.4, 1.4, side * 2.1)
+            ];
+            var swagCurve = new THREE.CatmullRomCurve3(swagPoints);
+            var swagGeo = new THREE.TubeGeometry(swagCurve, 12, 0.02, 6, false);
+            var swagMesh = new THREE.Mesh(swagGeo, brightBrassMat);
+            ship.add(swagMesh);
+        }
     });
 
-    // Vertical Fins (Top & Bottom)
+    // Top Observation Cupola & Swallowtail Pennant Flag
+    var cupolaGeo = new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    var cupolaMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+    var cupolaMesh = new THREE.Mesh(cupolaGeo, cupolaMat);
+    cupolaMesh.position.set(0.4, 3.45, 0);
+    ship.add(cupolaMesh);
+
+    var mastGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8);
+    var mastMesh = new THREE.Mesh(mastGeo, brightBrassMat);
+    mastMesh.position.set(0.4, 4.2, 0);
+    ship.add(mastMesh);
+
+    // Swallowtail Pennant Flag ("THE AEONS VOYAGER")
+    var flagShape = new THREE.Shape();
+    flagShape.moveTo(0, 0);
+    flagShape.lineTo(-1.8, 0.38);
+    flagShape.lineTo(-1.2, 0);
+    flagShape.lineTo(-1.8, -0.38);
+    flagShape.lineTo(0, 0);
+    var flagGeo = new THREE.ShapeGeometry(flagShape);
+    var flagMat = new THREE.MeshStandardMaterial({ color: 0xb45309, side: THREE.DoubleSide, roughness: 0.4 });
+    var flagMesh = new THREE.Mesh(flagGeo, flagMat);
+    flagMesh.position.set(0.4, 4.6, 0);
+    ship.add(flagMesh);
+
+    // Gasbag Empennage Tail Fins (Cross)
     [-1, 1].forEach(function (dir) {
         var finShape = new THREE.Shape();
-        finShape.moveTo(-2.5, 0);
-        finShape.lineTo(-5.3, dir * 1.9);
-        finShape.lineTo(-4.3, dir * 1.9);
-        finShape.lineTo(-1.5, 0);
+        finShape.moveTo(-2.2, 0);
+        finShape.lineTo(-4.8, dir * 1.8);
+        finShape.lineTo(-3.8, dir * 1.8);
+        finShape.lineTo(-1.2, 0);
         finShape.closePath();
-
-        var extrudeSettings = { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 };
-        var finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
-        var finMesh = new THREE.Mesh(finGeo, finMat);
-        finMesh.position.z = -0.04;
+        var finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.06, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, steps: 1 });
+        var finMesh = new THREE.Mesh(finGeo, bronzeMat);
+        finMesh.position.set(0, 1.4, -0.03);
         ship.add(finMesh);
 
-        var lightGeo = new THREE.SphereGeometry(0.12, 16, 16);
+        var lightGeo = new THREE.SphereGeometry(0.12, 12, 12);
         var lightMat = new THREE.MeshBasicMaterial({ color: dir > 0 ? 0xef4444 : 0x10b981 });
         var lightMesh = new THREE.Mesh(lightGeo, lightMat);
-        lightMesh.position.set(-5.1, dir * 1.9, 0);
+        lightMesh.position.set(-4.6, 1.4 + dir * 1.8, 0);
         ship.add(lightMesh);
     });
 
-    // Horizontal Fins (Port & Starboard)
     [-1, 1].forEach(function (dir) {
         var hFinShape = new THREE.Shape();
-        hFinShape.moveTo(-2.5, 0);
-        hFinShape.lineTo(-5.3, dir * 1.9);
-        hFinShape.lineTo(-4.3, dir * 1.9);
-        hFinShape.lineTo(-1.5, 0);
+        hFinShape.moveTo(-2.2, 0);
+        hFinShape.lineTo(-4.8, dir * 1.8);
+        hFinShape.lineTo(-3.8, dir * 1.8);
+        hFinShape.lineTo(-1.2, 0);
         hFinShape.closePath();
-
-        var extrudeSettings = { depth: 0.08, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 };
-        var hFinGeo = new THREE.ExtrudeGeometry(hFinShape, extrudeSettings);
-        var hFinMesh = new THREE.Mesh(hFinGeo, finMat);
+        var hFinGeo = new THREE.ExtrudeGeometry(hFinShape, { depth: 0.06, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, steps: 1 });
+        var hFinMesh = new THREE.Mesh(hFinGeo, bronzeMat);
         hFinMesh.rotation.x = Math.PI / 2;
-        hFinMesh.position.y = 0.04;
+        hFinMesh.position.set(0, 1.43, 0);
         ship.add(hFinMesh);
     });
 
-    // 4. Underslung Mahogany Observation Gondola
-    var gondolaGeo = new THREE.BoxGeometry(3.8, 0.8, 1.0);
-    var gondolaMat = new THREE.MeshStandardMaterial({
-        color: 0x451a03,
-        roughness: 0.45,
-        metalness: 0.5
+    // 2. UNDERSLUNG SAILING GALLEON SHIP HULL
+    var galleonGroup = new THREE.Group();
+    galleonGroup.position.set(0.3, -1.8, 0);
+
+    // Sculpted Clipper/Galleon Ship Hull Profile
+    var hullShape = new THREE.Shape();
+    hullShape.moveTo(-2.6, 0.45);  // Stern deck
+    hullShape.lineTo(-2.6, -0.6); // Stern keel
+    hullShape.quadraticCurveTo(-0.8, -1.2, 1.6, -0.9); // Keel bottom
+    hullShape.quadraticCurveTo(3.0, -0.3, 3.6, 0.75);  // Sweeping Bow Prow
+    hullShape.lineTo(3.2, 0.65);   // Bow deck
+    hullShape.quadraticCurveTo(0.5, 0.05, -2.6, 0.45); // Sheer deck curve
+    hullShape.closePath();
+
+    var extrudeGalleon = {
+        steps: 2,
+        depth: 1.3,
+        bevelEnabled: true,
+        bevelThickness: 0.28,
+        bevelSize: 0.22,
+        bevelSegments: 4
+    };
+    var galleonGeo = new THREE.ExtrudeGeometry(hullShape, extrudeGalleon);
+    var galleonMesh = new THREE.Mesh(galleonGeo, woodHullMat);
+    galleonMesh.position.z = -0.65;
+    galleonGroup.add(galleonMesh);
+
+    // Wooden Deck
+    var deckGeo = new THREE.BoxGeometry(5.4, 0.08, 1.4);
+    var deckMesh = new THREE.Mesh(deckGeo, woodDeckMat);
+    deckMesh.position.set(0.3, 0.25, 0);
+    galleonGroup.add(deckMesh);
+
+    // Gilded Sheer Line Trim & Railings
+    var railGeo = new THREE.BoxGeometry(6.2, 0.08, 1.55);
+    var railMesh = new THREE.Mesh(railGeo, brightBrassMat);
+    railMesh.position.set(0.4, 0.42, 0);
+    galleonGroup.add(railMesh);
+
+    // Aft Captain's Sterncastle Cabin
+    var castleGeo = new THREE.BoxGeometry(1.5, 1.0, 1.3);
+    var castleMesh = new THREE.Mesh(castleGeo, woodHullMat);
+    castleMesh.position.set(-1.8, 0.85, 0);
+    galleonGroup.add(castleMesh);
+
+    var castleTrimGeo = new THREE.BoxGeometry(1.55, 0.08, 1.35);
+    var castleTrim = new THREE.Mesh(castleTrimGeo, brightBrassMat);
+    castleTrim.position.set(-1.8, 1.38, 0);
+    galleonGroup.add(castleTrim);
+
+    var castleRoofGeo = new THREE.ConeGeometry(0.85, 0.55, 4);
+    var castleRoof = new THREE.Mesh(castleRoofGeo, brightBrassMat);
+    castleRoof.position.set(-1.8, 1.68, 0);
+    castleRoof.rotation.y = Math.PI / 4;
+    galleonGroup.add(castleRoof);
+
+    // Aft Cabin Stained Glass Windows
+    [-1, 1].forEach(function (side) {
+        [-0.35, 0.25].forEach(function (wx) {
+            var win = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.36, 0.06), windowGlowMat);
+            win.position.set(-1.8 + wx, 0.85, side * 0.68);
+            galleonGroup.add(win);
+        });
     });
-    var gondolaMesh = new THREE.Mesh(gondolaGeo, gondolaMat);
-    gondolaMesh.position.set(0.5, -2.45, 0);
-    ship.add(gondolaMesh);
-
-    // Gondola Gilded Base & Windows
-    var gBaseGeo = new THREE.BoxGeometry(4.0, 0.12, 1.1);
-    var gBaseMesh = new THREE.Mesh(gBaseGeo, ringMat);
-    gBaseMesh.position.set(0.5, -2.85, 0);
-    ship.add(gBaseMesh);
-
-    var winGeo = new THREE.BoxGeometry(0.38, 0.38, 1.04);
-    var winMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-    [-1.3, -0.7, -0.1, 0.5, 1.1, 1.7].forEach(function (wx) {
-        var winMesh = new THREE.Mesh(winGeo, winMat);
-        winMesh.position.set(0.5 + wx, -2.42, 0);
-        ship.add(winMesh);
+    // Stern Gallery Windows
+    [-0.35, 0, 0.35].forEach(function (wz) {
+        var sternWin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.36, 0.22), windowGlowMat);
+        sternWin.position.set(-2.58, 0.85, wz);
+        galleonGroup.add(sternWin);
     });
 
-    // Gondola Suspension Struts
-    var strutMat = new THREE.MeshStandardMaterial({ color: 0x78350f, metalness: 0.85 });
-    [-1.1, -0.2, 0.8, 1.8].forEach(function (sx) {
-        var strutGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.55, 8);
-        var strutMeshL = new THREE.Mesh(strutGeo, strutMat);
-        strutMeshL.position.set(0.5 + sx, -2.0, 0.35);
-        ship.add(strutMeshL);
-        var strutMeshR = new THREE.Mesh(strutGeo, strutMat);
-        strutMeshR.position.set(0.5 + sx, -2.0, -0.35);
-        ship.add(strutMeshR);
+    // Long Protruding Bowsprit Spar
+    var bowspritGeo = new THREE.CylinderGeometry(0.035, 0.08, 3.4, 10);
+    var bowspritMesh = new THREE.Mesh(bowspritGeo, brightBrassMat);
+    bowspritMesh.rotation.z = -Math.PI / 3.4;
+    bowspritMesh.position.set(4.8, 1.6, 0);
+    galleonGroup.add(bowspritMesh);
+
+    // Celestial Stabilizer Wings (Swept Filigree Fins from Image 3)
+    [-1, 1].forEach(function (side) {
+        var wingShape = new THREE.Shape();
+        wingShape.moveTo(0, 0);
+        wingShape.quadraticCurveTo(1.2, 0.6, 2.6, 1.9);
+        wingShape.quadraticCurveTo(2.1, 1.1, 2.4, 0.4);
+        wingShape.quadraticCurveTo(1.2, -0.2, 0, -0.4);
+        wingShape.closePath();
+
+        var wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth: 0.05, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02 });
+        var wingMesh = new THREE.Mesh(wingGeo, brightBrassMat);
+        wingMesh.position.set(0.1, -0.1, side * 0.8);
+        wingMesh.rotation.y = side * 0.35;
+        wingMesh.rotation.x = side * 0.4;
+        galleonGroup.add(wingMesh);
     });
 
-    // 5. Engine Nacelles & Twin Spinning Brass Propellers
-    var nacelleGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.9, 16);
-    var nacelleMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.3, metalness: 0.92 });
+    // Ship Anchor on Chain
+    var anchorGeo = new THREE.TorusGeometry(0.24, 0.04, 8, 16, Math.PI);
+    var anchorMesh = new THREE.Mesh(anchorGeo, bronzeMat);
+    anchorMesh.rotation.z = Math.PI;
+    anchorMesh.position.set(3.0, -0.5, 0.8);
+    galleonGroup.add(anchorMesh);
+
+    // Main Ship Mast reaching up to Gasbag
+    var shipMastGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.5, 8);
+    var shipMast = new THREE.Mesh(shipMastGeo, brightBrassMat);
+    shipMast.position.set(0.5, 1.5, 0);
+    galleonGroup.add(shipMast);
+
+    // Rigging Shrouds & Suspension Cables
+    var cableMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, metalness: 0.95 });
+    [-2.1, -0.8, 0.5, 1.8, 2.8].forEach(function (cx) {
+        [-1, 1].forEach(function (side) {
+            var cablePoints = [
+                new THREE.Vector3(cx, 0.45, side * 0.7),
+                new THREE.Vector3(cx * 0.92, 3.1, side * 1.85)
+            ];
+            var cableCurve = new THREE.CatmullRomCurve3(cablePoints);
+            var cGeo = new THREE.TubeGeometry(cableCurve, 4, 0.016, 4, false);
+            var cMesh = new THREE.Mesh(cGeo, cableMat);
+            galleonGroup.add(cMesh);
+        });
+    });
+
+    ship.add(galleonGroup);
+
+    // 3. THE SIGNATURE LARGE HANGING GLOWING LANTERN
+    var lanternGroup = new THREE.Group();
+    lanternGroup.position.set(6.2, -0.3, 0); // Suspended from tip of bowsprit
+
+    // Suspension Chain
+    var chainPoints = [
+        new THREE.Vector3(0, 0.9, 0),
+        new THREE.Vector3(0, 0, 0)
+    ];
+    var chainCurve = new THREE.CatmullRomCurve3(chainPoints);
+    var chainMesh = new THREE.Mesh(new THREE.TubeGeometry(chainCurve, 4, 0.022, 4, false), brightBrassMat);
+    lanternGroup.add(chainMesh);
+
+    // Lantern Ornate Brass Cap
+    var lCap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.45, 0.28, 8), brightBrassMat);
+    lCap.position.y = -0.12;
+    lanternGroup.add(lCap);
+
+    // Lantern Glass Body (Octagonal faceted)
+    var lBody = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.35, 0.75, 8), lanternGlassMat);
+    lBody.position.y = -0.6;
+    lanternGroup.add(lBody);
+
+    // 8 Brass Corner Pillars
+    for (var p = 0; p < 8; p++) {
+        var pa = (p * Math.PI * 2) / 8;
+        var pillarGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.76, 4);
+        var pillarMesh = new THREE.Mesh(pillarGeo, brightBrassMat);
+        pillarMesh.position.set(Math.cos(pa) * 0.38, -0.6, Math.sin(pa) * 0.38);
+        lanternGroup.add(pillarMesh);
+    }
+
+    // Inner Glowing Core
+    var flameMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    flameMesh.position.y = -0.6;
+    lanternGroup.add(flameMesh);
+
+    // Lantern Base & Finial Pendant
+    var lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.12, 0.28, 8), brightBrassMat);
+    lBase.position.y = -1.05;
+    lanternGroup.add(lBase);
+
+    var finialGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    var finialMesh = new THREE.Mesh(finialGeo, brightBrassMat);
+    finialMesh.position.y = -1.25;
+    lanternGroup.add(finialMesh);
+
+    // Point Light casting warm radiance
+    var lanternLight = new THREE.PointLight(0xf59e0b, 2.8, 20, 1.2);
+    lanternLight.position.set(0, -0.6, 0);
+    lanternGroup.add(lanternLight);
+
+    // Volumetric Forward Warm Aura Cone
+    var coneGeo = new THREE.ConeGeometry(3.2, 9.5, 24, 1, true);
+    var coneMat = new THREE.MeshBasicMaterial({
+        color: 0xfef08a,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+    var coneMesh = new THREE.Mesh(coneGeo, coneMat);
+    coneMesh.position.set(0.5, -4.8, 0);
+    coneMesh.rotation.z = -Math.PI / 3.4;
+    lanternGroup.add(coneMesh);
+
+    ship.add(lanternGroup);
+
+    // 4. PROPELLERS & STEAM ENGINES
     var propMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.15, metalness: 0.98 });
     var props = [];
     var exhaustParticles = [];
 
+    // Stern 4-Blade Pusher Propeller (Behind Galleon Rudder)
+    var sternPropGroup = new THREE.Group();
+    sternPropGroup.position.set(-2.6, -2.1, 0);
+
+    var sternHub = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 14), propMat);
+    sternPropGroup.add(sternHub);
+
+    for (var b = 0; b < 4; b++) {
+        var bladeGeo = new THREE.BoxGeometry(0.04, 1.15, 0.22);
+        var bladeMesh = new THREE.Mesh(bladeGeo, propMat);
+        var a = (b * Math.PI * 2) / 4;
+        bladeMesh.rotation.x = a;
+        bladeMesh.rotation.y = 0.3;
+        bladeMesh.position.y = Math.sin(a) * 0.56;
+        bladeMesh.position.z = Math.cos(a) * 0.56;
+        sternPropGroup.add(bladeMesh);
+    }
+    ship.add(sternPropGroup);
+    props.push(sternPropGroup);
+
+    // Outrigger Turbines
     [-1, 1].forEach(function (side) {
-        var nacelle = new THREE.Mesh(nacelleGeo, nacelleMat);
+        var nacelleGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.85, 14);
+        var nacelle = new THREE.Mesh(nacelleGeo, bronzeMat);
         nacelle.rotation.z = Math.PI / 2;
-        nacelle.position.set(-0.4, -1.2, side * 2.3);
+        nacelle.position.set(-0.2, -0.4, side * 2.2);
         ship.add(nacelle);
 
-        var bracketGeo = new THREE.CylinderGeometry(0.045, 0.045, 1.2, 8);
-        var bracket = new THREE.Mesh(bracketGeo, strutMat);
-        bracket.rotation.x = side * (Math.PI / 3.2);
-        bracket.position.set(-0.4, -1.55, side * 1.5);
+        var bracketGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8);
+        var bracket = new THREE.Mesh(bracketGeo, brightBrassMat);
+        bracket.rotation.x = side * (Math.PI / 3.4);
+        bracket.position.set(-0.2, -0.85, side * 1.4);
         ship.add(bracket);
 
         var propGroup = new THREE.Group();
-        propGroup.position.set(-0.95, -1.2, side * 2.3);
+        propGroup.position.set(-0.7, -0.4, side * 2.2);
 
-        var hubGeo = new THREE.SphereGeometry(0.14, 16, 16);
-        var hubMesh = new THREE.Mesh(hubGeo, propMat);
-        propGroup.add(hubMesh);
+        var hub = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), propMat);
+        propGroup.add(hub);
 
         for (var b = 0; b < 3; b++) {
-            var bladeGeo = new THREE.BoxGeometry(0.03, 0.72, 0.14);
+            var bladeGeo = new THREE.BoxGeometry(0.03, 0.65, 0.12);
             var bladeMesh = new THREE.Mesh(bladeGeo, propMat);
-            var bladeAngle = (b * Math.PI * 2) / 3;
-            bladeMesh.rotation.x = bladeAngle;
+            var ba = (b * Math.PI * 2) / 3;
+            bladeMesh.rotation.x = ba;
             bladeMesh.rotation.y = 0.25;
-            bladeMesh.position.y = Math.sin(bladeAngle) * 0.36;
-            bladeMesh.position.z = Math.cos(bladeAngle) * 0.36;
+            bladeMesh.position.y = Math.sin(ba) * 0.32;
+            bladeMesh.position.z = Math.cos(ba) * 0.32;
             propGroup.add(bladeMesh);
         }
-
         ship.add(propGroup);
         props.push(propGroup);
 
-        var steamGeo = new THREE.SphereGeometry(0.15, 8, 8);
-        var steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 });
+        // Steam Exhaust
+        var steamGeo = new THREE.SphereGeometry(0.14, 8, 8);
+        var steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
         for (var s = 0; s < 4; s++) {
             var steamP = new THREE.Mesh(steamGeo, steamMat);
-            steamP.position.set(-1.2 - s * 0.4, -1.0 + Math.random() * 0.2, side * 2.3 + (Math.random() - 0.5) * 0.2);
-            steamP.scale.setScalar(1.0 + s * 0.6);
+            steamP.position.set(-0.9 - s * 0.35, -0.3 + Math.random() * 0.15, side * 2.2);
+            steamP.scale.setScalar(1.0 + s * 0.5);
             ship.add(steamP);
             exhaustParticles.push({ mesh: steamP, baseOffset: s, side: side });
         }
     });
 
-    // 6. Volumetric Searchlight Cone
-    var coneGeo = new THREE.ConeGeometry(2.8, 8.5, 32, 1, true);
-    var coneMat = new THREE.MeshBasicMaterial({
-        color: 0xfef08a,
-        transparent: true,
-        opacity: 0.25,
-        side: THREE.DoubleSide,
-        depthWrite: false
-    });
-    var coneMesh = new THREE.Mesh(coneGeo, coneMat);
-    coneMesh.position.set(4.8, -5.8, 0);
-    coneMesh.rotation.z = -Math.PI / 3.2;
-    ship.add(coneMesh);
-
-    return { group: ship, props: props, exhaustParticles: exhaustParticles, coneMesh: coneMesh };
+    return { group: ship, props: props, exhaustParticles: exhaustParticles, coneMesh: coneMesh, lanternGroup: lanternGroup };
 }
 
 function init3DAirshipInspector(container) {
