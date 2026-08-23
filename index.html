@@ -24,105 +24,100 @@
         <p class="eyebrow">Global seismic activity</p>
         <h1>Earthquake Monitor</h1>
       </div>
-      <div class="topbar-actions">
-        <fieldset class="range-fieldset" aria-label="Earthquake time range">
-          <legend class="sr-only">Time range</legend>
-          <div class="range-chip-group" role="group" aria-label="Quick ranges">
-            <button type="button" class="range-preset is-active" data-range="24h" aria-pressed="true">24h</button>
-            <button type="button" class="range-preset" data-range="7d" aria-pressed="false">7d</button>
-            <button type="button" class="range-preset" data-range="30d" aria-pressed="false">30d</button>
+      <div class="header-actions">
+        <div class="date-range" aria-label="Earthquake date range">
+          <span class="range-label" id="range-label">Range</span>
+          <div class="range-presets" role="group" aria-labelledby="range-label">
+            <button class="range-preset" type="button" data-range="1h">1h</button>
+            <button class="range-preset is-active" type="button" data-range="24h" aria-pressed="true">24h</button>
+            <button class="range-preset" type="button" data-range="7d">7d</button>
+            <button class="range-preset" type="button" data-range="30d">30d</button>
           </div>
-          <label for="range-select" class="sr-only">Select time range</label>
-          <select id="range-select" aria-label="Select earthquake time range"></select>
-        </fieldset>
-        <div id="live-pill" class="live-pill" role="status" aria-live="polite">
-          <span class="live-indicator"></span>
-          <span id="live-pill-text">Loading feed…</span>
+          <label class="visually-hidden" for="range-select">More time ranges</label>
+          <select id="range-select" class="range-select" aria-label="More earthquake time ranges"></select>
         </div>
+        <div class="status-pill" role="status" aria-live="polite">Loading · 24 hours</div>
       </div>
     </header>
 
-    <div class="toolbar-panel">
+    <section class="toolbar-panel" aria-label="Search and filter earthquakes">
       <div class="search-box">
         <span class="search-icon" aria-hidden="true">🔍</span>
-        <label for="quake-search" class="sr-only">Search place, country, region, or magnitude</label>
-        <input type="search" id="quake-search" placeholder="Search place or country (e.g. Japan, California, Chile)..."
-          autocomplete="off" aria-autocomplete="list" aria-controls="search-suggestions" />
-        <button type="button" id="clear-search" class="search-clear-btn" aria-label="Clear search query"
-          hidden>✕</button>
-        <div id="search-suggestions" class="search-suggestions" role="listbox" hidden></div>
+        <input id="quake-search" type="search" placeholder="Search place or country (e.g. Japan, California, Chile)…" aria-label="Search earthquakes by place or country" autocomplete="off" />
+        <button id="clear-search" class="clear-search-btn" type="button" aria-label="Clear search query" hidden>✕</button>
       </div>
 
-      <div class="mag-filter-group" role="group" aria-label="Minimum magnitude filter">
-        <span class="filter-group-label">MIN MAG</span>
-        <button type="button" class="mag-filter-chip is-active" data-mag="0" aria-pressed="true">All</button>
-        <button type="button" class="mag-filter-chip" data-mag="2.5" aria-pressed="false">2.5+</button>
-        <button type="button" class="mag-filter-chip" data-mag="4.5" aria-pressed="false">4.5+</button>
-        <button type="button" class="mag-filter-chip" data-mag="6.0" aria-pressed="false">6.0+</button>
-        <button type="button" class="mag-filter-chip" data-mag="7.0" aria-pressed="false">7.0+</button>
+      <div class="mag-filters" role="group" aria-label="Minimum magnitude filter">
+        <span class="mag-filter-label">Min Mag</span>
+        <button class="mag-filter-chip is-active" type="button" data-mag="0" aria-pressed="true">All</button>
+        <button class="mag-filter-chip" type="button" data-mag="2.5" aria-pressed="false">2.5+</button>
+        <button class="mag-filter-chip" type="button" data-mag="4.5" aria-pressed="false">4.5+</button>
+        <button class="mag-filter-chip" type="button" data-mag="6.0" aria-pressed="false">6.0+</button>
+        <button class="mag-filter-chip" type="button" data-mag="7.0" aria-pressed="false">7.0+</button>
       </div>
 
-      <div class="feature-toggles">
-        <button type="button" id="fly-to-airship" class="feature-btn airship-feature-btn" title="Track HMS Aetheria 3D Airship (Northern Orbit)">
-          <span class="feature-icon" aria-hidden="true">🛸</span>
-          <span id="airship-status-pill">🛰️ HMS Aetheria</span>
+      <div class="toolbar-actions">
+        <button id="fly-to-airship" class="toolbar-btn airship-btn-indicator" type="button" title="Locate Victorian Dirigible (HMS Aetheria) orbiting the globe">
+          <span class="btn-icon" aria-hidden="true">🛸</span>
+          <span id="airship-status-pill">HMS Aetheria</span>
         </button>
-        <button type="button" id="toggle-feed-drawer" class="feature-btn feed-toggle-btn" aria-expanded="false"
-          aria-controls="feed-drawer">
-          <span class="feature-icon" aria-hidden="true">⚡</span>
+        <button id="toggle-feed-drawer" class="toolbar-btn" type="button" aria-expanded="false" aria-controls="feed-drawer" title="Toggle recent and notable earthquake list">
+          <span class="btn-icon" aria-hidden="true">⚡</span>
           <span>Feed List</span>
         </button>
-        <button type="button" id="toggle-timelapse" class="feature-btn timelapse-toggle-btn" aria-pressed="false">
-          <span class="feature-icon" aria-hidden="true">▶</span>
+        <button id="toggle-timelapse" class="toolbar-btn timelapse-btn" type="button" aria-pressed="false" title="Play chronological seismic timelapse">
+          <span class="btn-icon" aria-hidden="true">▶</span>
           <span id="timelapse-btn-label">Timelapse</span>
         </button>
       </div>
-    </div>
-
-    <!-- Timelapse Playback Bar (Hidden by default) -->
-    <div id="timelapse-bar" class="timelapse-bar" hidden>
-      <button type="button" id="timelapse-play-pause" class="timelapse-play-btn" aria-label="Play or pause timelapse">❚❚</button>
-      <div class="timelapse-slider-wrap">
-        <input type="range" id="timelapse-range" min="0" max="100" value="100" step="1" aria-label="Timelapse time progress" />
-        <div class="timelapse-meta">
-          <span id="timelapse-time-label">Playback: 100%</span>
-        </div>
-      </div>
-      <button type="button" id="timelapse-stop" class="timelapse-stop-btn" aria-label="Stop timelapse">■</button>
-    </div>
-
-    <section class="summary-grid" aria-label="Earthquake statistics">
-      <article class="stat-card">
-        <p class="stat-label">Earthquakes</p>
-        <p id="total-events" class="stat-value">—</p>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Strongest</p>
-        <p id="strongest-magnitude" class="stat-value">—</p>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Deepest</p>
-        <p id="deepest-depth" class="stat-value">—</p>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Latest</p>
-        <p id="latest-event" class="stat-value">—</p>
-      </article>
     </section>
 
+    <!-- Interactive Timelapse Scrubber Bar -->
+    <div id="timelapse-bar" class="timelapse-bar" hidden aria-label="Seismic timelapse controller">
+      <button id="timelapse-play-pause" class="timelapse-control-btn" type="button" aria-label="Play or pause timelapse">❚❚</button>
+      <div class="timelapse-progress-wrap">
+        <input id="timelapse-range" type="range" min="0" max="100" value="0" step="0.5" aria-label="Timelapse time progress" />
+        <div id="timelapse-time-label" class="timelapse-time-label" aria-live="polite">Playback: 0%</div>
+      </div>
+      <button id="timelapse-stop" class="timelapse-control-btn" type="button" aria-label="Stop timelapse">■</button>
+    </div>
+
+    <section class="stats-panel" aria-label="Earthquake summary">
+      <div class="stat-card">
+        <span class="stat-label">Earthquakes</span>
+        <strong id="total-events">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Strongest</span>
+        <strong id="strongest-magnitude">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Deepest</span>
+        <strong id="deepest-depth">--</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Latest</span>
+        <strong id="latest-event">--</strong>
+      </div>
+    </section>
+    <p id="feed-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+
+    <!-- The div that holds our map and side activity drawer -->
     <div id="map-wrap">
       <div id="map-id"></div>
 
       <!-- Activity Feed Drawer -->
-      <aside id="feed-drawer" class="feed-drawer" aria-label="Earthquake activity feed" hidden>
+      <aside id="feed-drawer" class="feed-drawer" aria-label="Recent earthquake list" hidden>
         <div class="feed-drawer-header">
           <div class="feed-drawer-title">
-            <h3>Activity Feed</h3>
-            <span id="feed-drawer-count" class="feed-drawer-count">Loading...</span>
+            <h3>Recent Earthquakes</h3>
+            <span id="feed-drawer-count" class="feed-drawer-count">0 events</span>
           </div>
           <button id="close-feed-drawer" class="feed-drawer-close" type="button" aria-label="Close activity feed">✕</button>
         </div>
-        <div id="feed-drawer-list" class="feed-drawer-list" role="list"></div>
+        <div id="feed-drawer-list" class="feed-drawer-list" role="feed" aria-label="Earthquake items">
+          <p class="feed-drawer-empty">Loading earthquakes…</p>
+        </div>
       </aside>
 
       <!-- Orbital Airship Expedition Drawer -->
