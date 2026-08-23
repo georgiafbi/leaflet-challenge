@@ -2121,29 +2121,64 @@ function createAirshipImage() {
     return ctx.getImageData(0, 0, width, height);
 }
 
-var SATELLITE_ORBIT = {
-    inclinationDeg: 51.6, // Low Earth Orbit standard inclination
-    nodeLonDeg: -60.0,    // Ascending node longitude offset
-    periodSec: 120,       // 2 minutes for 1 full orbital revolution around the planet
-    altitude: "420 km (Low Earth Orbit · 3,850 m Equivalent)",
-    speed: "7.66 km/s (27,600 km/h · 48 knots Cruise)",
-    orbitType: "Low Earth Orbit (LEO Satellite)",
-    inclination: "51.6° LEO"
-};
+var SATELLITE_FLEET = [
+    {
+        id: "north",
+        vesselIdx: 0,
+        name: "HMS Aetheria",
+        registry: "No. 1894-A",
+        tier: "Northern Zonal Orbit",
+        region: "Northern Hemisphere",
+        baseLat: 36.0,
+        latAmplitude: 3.5,
+        latPhase: 0.0,
+        nodeLonDeg: -60.0,
+        speedFactor: 1.0,
+        altitude: "420 km (Low Earth Orbit · 3,850 m Equivalent)",
+        speed: "7.66 km/s (27,600 km/h · 48 knots Cruise)",
+        color: "#fbbf24"
+    },
+    {
+        id: "equator",
+        vesselIdx: 1,
+        name: "HMS Equinox",
+        registry: "No. 1894-B",
+        tier: "Equatorial Zonal Orbit",
+        region: "Equatorial Zone",
+        baseLat: 0.0,
+        latAmplitude: 3.0,
+        latPhase: Math.PI / 3,
+        nodeLonDeg: 60.0,
+        speedFactor: 0.95,
+        altitude: "410 km (Low Earth Orbit · 3,850 m Equivalent)",
+        speed: "7.68 km/s (27,650 km/h · 48 knots Cruise)",
+        color: "#38bdf8"
+    },
+    {
+        id: "south",
+        vesselIdx: 2,
+        name: "HMS Australis",
+        registry: "No. 1894-C",
+        tier: "Southern Zonal Orbit",
+        region: "Southern Hemisphere",
+        baseLat: -35.0,
+        latAmplitude: 3.5,
+        latPhase: (Math.PI * 2) / 3,
+        nodeLonDeg: 180.0,
+        speedFactor: 1.05,
+        altitude: "430 km (Low Earth Orbit · 3,850 m Equivalent)",
+        speed: "7.64 km/s (27,500 km/h · 48 knots Cruise)",
+        color: "#f43f5e"
+    }
+];
 
-function calculateOrbitCoordinates(progress) {
-    var u = ((progress % 1.0) + 1.0) % 1.0;
-    var theta = u * Math.PI * 2;
-    var incRad = (SATELLITE_ORBIT.inclinationDeg * Math.PI) / 180;
+var followedVesselIndex = 0;
 
-    // Exact spherical satellite orbital trigonometry
-    var latRad = Math.asin(Math.sin(incRad) * Math.sin(theta));
-    var lat = (latRad * 180) / Math.PI;
-
-    var dLonRad = Math.atan2(Math.cos(incRad) * Math.sin(theta), Math.cos(theta));
-    var rawLon = SATELLITE_ORBIT.nodeLonDeg + (dLonRad * 180) / Math.PI;
-    var lon = ((rawLon + 540) % 360) - 180;
-
+function calculateVesselCoordinates(vessel, progress) {
+    var u = ((progress * vessel.speedFactor % 1.0) + 1.0) % 1.0;
+    var rawLon = vessel.nodeLonDeg + u * 360.0;
+    var lon = ((rawLon + 540.0) % 360.0) - 180.0;
+    var lat = vessel.baseLat + vessel.latAmplitude * Math.sin(u * Math.PI * 2.0 + vessel.latPhase);
     return { lon: lon, lat: lat, u: u };
 }
 
@@ -2171,73 +2206,90 @@ function findNearestOverflight(lon, lat) {
 
 function buildAirshipOrbitGeoJSON() {
     var features = [];
-    var steps = 360;
-    var coords = [];
+    var steps = 180;
 
-    for (var s = 0; s <= steps; s++) {
-        var u = s / steps;
-        var pt = calculateOrbitCoordinates(u);
-        coords.push([pt.lon, pt.lat]);
-    }
+    SATELLITE_FLEET.forEach(function (vessel) {
+        var coords = [];
+        for (var s = 0; s <= steps; s++) {
+            var u = s / steps;
+            var pt = calculateVesselCoordinates(vessel, u);
+            coords.push([pt.lon, pt.lat]);
+        }
 
-    // Segment across antimeridian for clean rendering
-    var segments = [[]];
-    for (var i = 0; i < coords.length; i++) {
-        var p = coords[i];
-        var currSeg = segments[segments.length - 1];
-        if (currSeg.length > 0) {
-            var prevP = currSeg[currSeg.length - 1];
-            if (Math.abs(p[0] - prevP[0]) > 180) {
-                segments.push([p]);
-                continue;
+        var segments = [[]];
+        for (var i = 0; i < coords.length; i++) {
+            var p = coords[i];
+            var currSeg = segments[segments.length - 1];
+            if (currSeg.length > 0) {
+                var prevP = currSeg[currSeg.length - 1];
+                if (Math.abs(p[0] - prevP[0]) > 180) {
+                    segments.push([p]);
+                    continue;
+                }
             }
+            currSeg.push(p);
         }
-        currSeg.push(p);
-    }
 
-    segments.forEach(function (seg, idx) {
-        if (seg.length > 1) {
-            features.push({
-                type: "Feature",
-                properties: { id: "orbit-seg-" + idx },
-                geometry: { type: "LineString", coordinates: seg }
-            });
-        }
+        segments.forEach(function (seg, idx) {
+            if (seg.length > 1) {
+                features.push({
+                    type: "Feature",
+                    properties: {
+                        id: "orbit-" + vessel.id + "-" + idx,
+                        tier: vessel.tier,
+                        color: vessel.color
+                    },
+                    geometry: { type: "LineString", coordinates: seg }
+                });
+            }
+        });
     });
 
     return { type: "FeatureCollection", features: features };
 }
 
-function getAirshipPosition(progress) {
-    var pt = calculateOrbitCoordinates(progress);
+function getAirshipPosition(progress, vesselIdx) {
+    var idx = typeof vesselIdx === "number" ? (vesselIdx % SATELLITE_FLEET.length + SATELLITE_FLEET.length) % SATELLITE_FLEET.length : 0;
+    var vessel = SATELLITE_FLEET[idx];
 
-    // Compute instantaneous velocity / heading vector along orbit
-    var ptNext = calculateOrbitCoordinates(progress + 0.001);
-    var deltaLon = ((ptNext.lon - pt.lon + 540) % 360) - 180;
+    var pt = calculateVesselCoordinates(vessel, progress);
+    var ptNext = calculateVesselCoordinates(vessel, progress + 0.001);
+
+    var deltaLon = ((ptNext.lon - pt.lon + 540.0) % 360.0) - 180.0;
     var dy = (ptNext.lat - pt.lat) * (Math.PI / 180);
     var dx = deltaLon * (Math.PI / 180) * Math.cos(pt.lat * Math.PI / 180);
     var bearing = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
 
-    // Icon points East (90 deg) in canvas, so iconHeading = (bearing - 90 + 360) % 360
     var iconHeading = (bearing - 90 + 360) % 360;
     var headingCompass = formatCompassHeading(bearing);
 
     var landmark = findNearestOverflight(pt.lon, pt.lat);
 
     return {
+        id: vessel.id,
+        vesselIdx: idx,
+        name: vessel.name,
+        registry: vessel.registry,
+        tier: vessel.tier,
+        region: vessel.region,
         lon: Number(pt.lon.toFixed(4)),
         lat: Number(pt.lat.toFixed(4)),
         bearing: Number(bearing.toFixed(1)),
         iconHeading: Number(iconHeading.toFixed(1)),
         headingCompass: headingCompass,
         currentWaypoint: landmark.name,
-        nextWaypoint: "Global Satellite Orbit (51.6° Inclination)",
+        nextWaypoint: vessel.tier + " (" + (vessel.baseLat >= 0 ? vessel.baseLat + "°N" : Math.abs(vessel.baseLat) + "°S") + ")",
         note: landmark.note,
-        altitude: SATELLITE_ORBIT.altitude,
-        speed: SATELLITE_ORBIT.speed,
-        orbitType: SATELLITE_ORBIT.orbitType,
-        inclination: SATELLITE_ORBIT.inclination
+        altitude: vessel.altitude,
+        speed: vessel.speed,
+        color: vessel.color
     };
+}
+
+function getAllAirshipPositions(progress) {
+    return SATELLITE_FLEET.map(function (v, idx) {
+        return getAirshipPosition(progress, idx);
+    });
 }
 
 function formatCompassHeading(deg) {
@@ -2246,20 +2298,23 @@ function formatCompassHeading(deg) {
     return String(Math.round(deg)).padStart(3, "0") + "° " + points[idx];
 }
 
-function getAirshipGeoJSON(state) {
+function getAirshipGeoJSON(positions) {
+    var posArray = Array.isArray(positions) ? positions : [positions];
     return {
         type: "FeatureCollection",
-        features: [
-            {
+        features: posArray.map(function (state) {
+            return {
                 type: "Feature",
                 geometry: {
                     type: "Point",
                     coordinates: [state.lon, state.lat]
                 },
                 properties: {
-                    name: "HMS Aetheria",
-                    registry: "No. 1894-A",
-                    class: "Royal Seismological Survey Dirigible",
+                    id: state.id,
+                    vesselIdx: state.vesselIdx,
+                    name: state.name,
+                    registry: state.registry,
+                    tier: state.tier,
                     altitude: state.altitude,
                     speed: state.speed,
                     heading: state.headingCompass,
@@ -2270,8 +2325,8 @@ function getAirshipGeoJSON(state) {
                     lon: state.lon,
                     lat: state.lat
                 }
-            }
-        ]
+            };
+        })
     };
 }
 
@@ -2286,26 +2341,28 @@ function initAirshipModule() {
         // Satellite orbital cruise: 1 full orbit around the planet in 120 seconds (2 minutes)
         if (airshipVisible) {
             airshipProgress = (airshipProgress + (elapsed / 120000)) % 1.0;
-            var pos = getAirshipPosition(airshipProgress);
+            var positions = getAllAirshipPositions(airshipProgress);
             var src = globeMap.getSource("airship");
             if (src) {
-                src.setData(getAirshipGeoJSON(pos));
+                src.setData(getAirshipGeoJSON(positions));
             }
+
+            var primary = positions[followedVesselIndex] || positions[0];
 
             // Update topbar airship badge if present
             var badge = document.getElementById("airship-status-pill");
             if (badge) {
-                badge.textContent = "🛰️ HMS Aetheria";
+                badge.textContent = "🛰️ " + primary.name;
             }
             var flyBtn = document.getElementById("fly-to-airship");
             if (flyBtn) {
-                flyBtn.title = "HMS Aetheria · Satellite Orbit over " + pos.currentWaypoint + " (Alt: " + pos.altitude + " · " + pos.speed + ")";
+                flyBtn.title = primary.name + " (" + primary.tier + ") · Over " + primary.currentWaypoint;
             }
 
             // Update camera if follow mode is active
             if (isFollowingAirship && globeMap) {
                 globeMap.easeTo({
-                    center: [pos.lon, pos.lat],
+                    center: [primary.lon, primary.lat],
                     duration: 100,
                     easing: function (x) { return x; }
                 });
@@ -2333,7 +2390,10 @@ function setAirshipVisibility(visible) {
     }
 }
 
-function toggleFollowAirship(forcedState) {
+function toggleFollowAirship(forcedState, targetVesselIdx) {
+    if (typeof targetVesselIdx === "number") {
+        followedVesselIndex = targetVesselIdx;
+    }
     if (typeof forcedState === "boolean") {
         isFollowingAirship = forcedState;
     } else {
@@ -2341,11 +2401,12 @@ function toggleFollowAirship(forcedState) {
     }
     var followBtn = document.getElementById("airship-follow-btn");
     if (followBtn) {
+        var v = SATELLITE_FLEET[followedVesselIndex] || SATELLITE_FLEET[0];
         followBtn.classList.toggle("is-active", isFollowingAirship);
-        followBtn.textContent = isFollowingAirship ? "🔭 Lock Camera (Active)" : "🔭 Follow Airship";
+        followBtn.textContent = isFollowingAirship ? "🛰️ Track " + v.name + " (Active)" : "🛰️ Track " + v.name;
     }
     if (isFollowingAirship) {
-        var pos = getAirshipPosition(airshipProgress);
+        var pos = getAirshipPosition(airshipProgress, followedVesselIndex);
         if (globeMap) {
             globeMap.flyTo({ center: [pos.lon, pos.lat], zoom: 4.5, speed: 1.2 });
         }
@@ -2971,9 +3032,11 @@ function init3DAirshipInspector(container) {
     };
 }
 
-function showAirshipPopup(lngLat) {
+function showAirshipPopup(lngLat, targetVesselIdx) {
     if (!globeMap) return;
-    var pos = getAirshipPosition(airshipProgress);
+    var vIdx = typeof targetVesselIdx === "number" ? targetVesselIdx : followedVesselIndex;
+    followedVesselIndex = vIdx;
+    var pos = getAirshipPosition(airshipProgress, vIdx);
 
     var popupContent = document.createElement("div");
     popupContent.className = "airship-popup";
@@ -2984,13 +3047,35 @@ function showAirshipPopup(lngLat) {
         <div class="airship-title-wrap">
             <span class="airship-insignia">🛰️</span>
             <div>
-                <h3>HMS Aetheria</h3>
-                <p class="airship-subtitle">Royal Celestial Orbiting Vessel · LEO Satellite Expedition</p>
+                <h3>${pos.name}</h3>
+                <p class="airship-subtitle">${pos.registry} · ${pos.tier}</p>
             </div>
         </div>
         <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Vent">💨</div>
     `;
     popupContent.appendChild(header);
+
+    // Fleet Constellation Tab Selector
+    var fleetTabs = document.createElement("div");
+    fleetTabs.className = "airship-fleet-tabs";
+    fleetTabs.style.cssText = "display:flex;gap:4px;margin-bottom:8px;padding:2px;background:rgba(0,0,0,0.3);border-radius:6px;";
+    fleetTabs.innerHTML = `
+        <button type="button" class="airship-fleet-tab ${vIdx === 0 ? "is-active" : ""}" data-vessel="0" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 0 ? "#b45309" : "transparent"};color:#fff;cursor:pointer;">North (36°N)</button>
+        <button type="button" class="airship-fleet-tab ${vIdx === 1 ? "is-active" : ""}" data-vessel="1" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 1 ? "#0284c7" : "transparent"};color:#fff;cursor:pointer;">Equator (0°)</button>
+        <button type="button" class="airship-fleet-tab ${vIdx === 2 ? "is-active" : ""}" data-vessel="2" style="flex:1;font-size:10px;font-weight:700;padding:4px 2px;border:none;border-radius:4px;background:${vIdx === 2 ? "#e11d48" : "transparent"};color:#fff;cursor:pointer;">South (35°S)</button>
+    `;
+    popupContent.appendChild(fleetTabs);
+
+    fleetTabs.querySelectorAll(".airship-fleet-tab").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var selectedIdx = parseInt(btn.getAttribute("data-vessel"), 10);
+            var nextPos = getAirshipPosition(airshipProgress, selectedIdx);
+            showAirshipPopup([nextPos.lon, nextPos.lat], selectedIdx);
+            if (isFollowingAirship) {
+                globeMap.flyTo({ center: [nextPos.lon, nextPos.lat], zoom: 4.5, speed: 1.2 });
+            }
+        });
+    });
 
     // 3D Realtime Airship Inspector Viewport
     var viewport3D = document.createElement("div");
@@ -3007,7 +3092,7 @@ function showAirshipPopup(lngLat) {
         <div class="airship-gauge">
             <span class="gauge-label">Orbital Alt</span>
             <strong class="gauge-val">420 km</strong>
-            <span class="gauge-sub">LEO Satellite Orbit</span>
+            <span class="gauge-sub">LEO Zonal Orbit</span>
         </div>
         <div class="airship-gauge">
             <span class="gauge-label">Velocity</span>
@@ -3017,7 +3102,7 @@ function showAirshipPopup(lngLat) {
         <div class="airship-gauge">
             <span class="gauge-label">Track Heading</span>
             <strong class="gauge-val">${pos.headingCompass}</strong>
-            <span class="gauge-sub">51.6° Inclination</span>
+            <span class="gauge-sub">${pos.tier}</span>
         </div>
         <div class="airship-gauge">
             <span class="gauge-label">Sub-Satellite Pt</span>
@@ -3042,9 +3127,9 @@ function showAirshipPopup(lngLat) {
     followBtn.id = "airship-follow-btn";
     followBtn.type = "button";
     followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
-    followBtn.textContent = isFollowingAirship ? "🛰️ Track Orbit (Active)" : "🛰️ Track Orbit";
+    followBtn.textContent = isFollowingAirship ? "🛰️ Track " + pos.name + " (Active)" : "🛰️ Track " + pos.name;
     followBtn.addEventListener("click", function () {
-        toggleFollowAirship();
+        toggleFollowAirship(undefined, vIdx);
     });
     actions.appendChild(followBtn);
 
@@ -4139,7 +4224,8 @@ function createMap() {
         globeMap.on("click", "airship-symbol", function (event) {
             var feature = event.features && event.features[0];
             if (!feature) return;
-            showAirshipPopup(event.lngLat);
+            var vIdx = (feature.properties && typeof feature.properties.vesselIdx === "number") ? feature.properties.vesselIdx : 0;
+            showAirshipPopup(event.lngLat, vIdx);
         });
 
         globeMap.on("mouseenter", "airship-symbol", function () {
