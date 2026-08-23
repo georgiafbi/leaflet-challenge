@@ -423,16 +423,45 @@
             properties: {
                 place: "70 km SSW of Tokyo, Japan",
                 country: "Japan",
+                countryCode: "JP",
                 displayRegion: "Japan",
                 championGroup: "Asia",
-                type: "earthquake"
+                type: "earthquake",
+                mag: 5.2,
+                depth: 25,
+                searchIndex: "70 km ssw of tokyo, japan tokyo japan jp asia earthquake shallow m5.2 mag 5.2 japanese"
             }
         };
         assertEqual(helpers.matchesSearchQuery(event, ""), true, "empty query matches all");
         assertEqual(helpers.matchesSearchQuery(event, "tokyo"), true, "city match");
         assertEqual(helpers.matchesSearchQuery(event, "JAPAN"), true, "case-insensitive country match");
+        assertEqual(helpers.matchesSearchQuery(event, "japanese"), true, "country alias match");
         assertEqual(helpers.matchesSearchQuery(event, "asia"), true, "champion group match");
         assertEqual(helpers.matchesSearchQuery(event, "california"), false, "non-matching query");
+        assertEqual(helpers.matchesSearchQuery(event, "Japan 5+"), true, "multi-token magnitude match");
+        assertEqual(helpers.matchesSearchQuery(event, "Japan 6+"), false, "magnitude above event mag fails");
+        assertEqual(helpers.matchesSearchQuery(event, "Tokyo shallow"), true, "depth category query matches");
+        assertEqual(helpers.matchesSearchQuery(event, "Tokyo deep"), false, "depth category query mismatch fails");
+    });
+
+    test("resolves state abbreviations and country aliases for robust searching", function () {
+        var usEvent = helpers.normalizeEarthquakeFeature({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [-117.6, 35.7, 8.2] },
+            properties: { place: "14 km ENE of Ridgecrest, CA", mag: 4.2, time: 1600000000000 }
+        });
+        assertEqual(usEvent.properties.state, "California", "resolved state name");
+        assertEqual(usEvent.properties.stateCode, "CA", "resolved state code");
+        assertEqual(usEvent.properties.country, "United States", "resolved country");
+        assert(usEvent.properties.locationAliases.includes("usa"), "aliases include usa");
+        assert(usEvent.properties.locationAliases.includes("california"), "aliases include california");
+
+        helpers.markRegionalChampions([usEvent]);
+        assertEqual(helpers.matchesSearchQuery(usEvent, "california"), true, "matches full state name");
+        assertEqual(helpers.matchesSearchQuery(usEvent, "CA"), true, "matches state code");
+        assertEqual(helpers.matchesSearchQuery(usEvent, "USA"), true, "matches country alias USA");
+        assertEqual(helpers.matchesSearchQuery(usEvent, "United States"), true, "matches country name");
+        assertEqual(helpers.matchesSearchQuery(usEvent, "Ridgecrest M4+"), true, "matches city and magnitude expression");
     });
 
     test("filters features by minimum magnitude threshold", function () {
@@ -445,9 +474,9 @@
 
     test("filters features across combined depth, magnitude, and search criteria", function () {
         var features = [
-            { properties: { depthKey: "0-10", mag: 5.5, place: "Fukushima, Japan", time: 100 } },
-            { properties: { depthKey: "10-30", mag: 2.1, place: "Los Angeles, CA", time: 200 } },
-            { properties: { depthKey: "90+", mag: 6.8, place: "Santiago, Chile", time: 300 } }
+            { properties: { depthKey: "0-10", mag: 5.5, depth: 8, place: "Fukushima, Japan", country: "Japan", searchIndex: "fukushima japan jp shallow m5.5 mag 5.5", time: 100 } },
+            { properties: { depthKey: "10-30", mag: 2.1, depth: 15, place: "Los Angeles, CA", state: "California", stateCode: "CA", country: "United States", searchIndex: "los angeles ca california usa united states shallow m2.1 mag 2.1", time: 200 } },
+            { properties: { depthKey: "90+", mag: 6.8, depth: 120, place: "Santiago, Chile", country: "Chile", searchIndex: "santiago chile cl deep m6.8 mag 6.8", time: 300 } }
         ];
         var filtered = helpers.getFilteredFeatures(features, {
             activeDepthRanges: new Set(["0-10", "90+"]),
@@ -458,14 +487,17 @@
         assertEqual(filtered[0].properties.place, "Santiago, Chile", "correct matched feature");
     });
 
-    test("verifies tectonic plate boundaries GeoJSON dataset structure", function () {
+    test("verifies PB2002 tectonic plate boundaries GeoJSON dataset structure", function () {
         assert(window.tectonicPlatesGeoJSON, "plate boundaries dataset exists");
         assertEqual(window.tectonicPlatesGeoJSON.type, "FeatureCollection", "feature collection type");
-        assert(window.tectonicPlatesGeoJSON.features.length >= 10, "comprehensive plate boundaries present");
+        assert(window.tectonicPlatesGeoJSON.features.length >= 200, "comprehensive PB2002 plate boundaries present");
         var firstFeature = window.tectonicPlatesGeoJSON.features[0];
         assertEqual(firstFeature.type, "Feature", "feature type");
         assertEqual(firstFeature.geometry.type, "LineString", "linestring geometry");
         assert(Array.isArray(firstFeature.geometry.coordinates) && firstFeature.geometry.coordinates.length > 2, "coordinate array");
+        assert(firstFeature.properties.name, "boundary name property exists");
+        assert(firstFeature.properties.type, "boundary type property exists");
+        assert(firstFeature.properties.plateA && firstFeature.properties.plateB, "plate pairings exist");
     });
 
     test("toggles feed drawer open and closed with synchronized accessibility attributes", function () {

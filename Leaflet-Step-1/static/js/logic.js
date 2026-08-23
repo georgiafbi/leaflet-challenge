@@ -319,6 +319,142 @@ function getCountryAt(lon, lat) {
     }
 }
 
+const usStateMap = {
+    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+    "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri",
+    "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+    "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+    "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
+    "DC": "District of Columbia", "PR": "Puerto Rico", "VI": "Virgin Islands", "GU": "Guam", "MP": "Northern Mariana Islands", "AS": "American Samoa"
+};
+
+const canadianProvinceMap = {
+    "BC": "British Columbia", "AB": "Alberta", "SK": "Saskatchewan", "MB": "Manitoba",
+    "ON": "Ontario", "QC": "Quebec", "NB": "New Brunswick", "NS": "Nova Scotia",
+    "PE": "Prince Edward Island", "NL": "Newfoundland and Labrador", "YT": "Yukon",
+    "NT": "Northwest Territories", "NU": "Nunavut"
+};
+
+const countryAliases = {
+    "US": ["usa", "united states", "america", "united states of america", "u.s.", "u.s.a."],
+    "GB": ["uk", "united kingdom", "great britain", "britain", "england", "scotland", "wales"],
+    "NZ": ["new zealand", "nz"],
+    "PG": ["papua new guinea", "png"],
+    "TR": ["turkey", "turkiye", "türkiye"],
+    "DO": ["dominican republic", "dr"],
+    "CD": ["dr congo", "congo", "drc"],
+    "AE": ["uae", "united arab emirates"],
+    "RU": ["russia", "russian federation"],
+    "IR": ["iran", "islamic republic of iran"],
+    "SY": ["syria", "syrian arab republic"],
+    "KR": ["south korea", "korea", "rok"],
+    "KP": ["north korea", "dprk"],
+    "PH": ["philippines", "philippine"],
+    "TW": ["taiwan", "roc"],
+    "ID": ["indonesia", "indonesian"],
+    "MX": ["mexico", "mexican"],
+    "JP": ["japan", "japanese"],
+    "CL": ["chile", "chilean"],
+    "PE": ["peru", "peruvian"],
+    "IS": ["iceland", "icelandic"],
+    "GR": ["greece", "greek"],
+    "IT": ["italy", "italian"]
+};
+
+function resolveLocationTokens(place, countryName, countryCode, lon, lat) {
+    var rawPlace = String(place || "").trim();
+    var foundState = null;
+    var foundStateCode = null;
+    var resolvedCountry = countryName || null;
+    var resolvedCountryCode = countryCode || null;
+    var aliases = new Set();
+
+    // Check US states in place (e.g. ", CA", ", California", "of Cobb, CA")
+    for (var code in usStateMap) {
+        var stateName = usStateMap[code];
+        var stateRegex = new RegExp("(?:,\\s*|\\b)" + code + "\\b", "i");
+        var nameRegex = new RegExp("\\b" + stateName + "\\b", "i");
+        if (stateRegex.test(rawPlace) || nameRegex.test(rawPlace)) {
+            foundState = stateName;
+            foundStateCode = code;
+            if (!resolvedCountry) {
+                resolvedCountry = "United States";
+                resolvedCountryCode = "US";
+            }
+            break;
+        }
+    }
+
+    // Check Canadian provinces in place (e.g. ", BC", ", British Columbia")
+    if (!foundState) {
+        for (var pCode in canadianProvinceMap) {
+            var provName = canadianProvinceMap[pCode];
+            var provRegex = new RegExp("(?:,\\s*|\\b)" + pCode + "\\b", "i");
+            var pNameRegex = new RegExp("\\b" + provName + "\\b", "i");
+            if (provRegex.test(rawPlace) || pNameRegex.test(rawPlace)) {
+                foundState = provName;
+                foundStateCode = pCode;
+                if (!resolvedCountry) {
+                    resolvedCountry = "Canada";
+                    resolvedCountryCode = "CA";
+                }
+                break;
+            }
+        }
+    }
+
+    // If still no country, check place string endings like ", Japan", ", Chile", ", Mexico", ", Indonesia"
+    if (!resolvedCountry) {
+        for (var cCode in countryAliases) {
+            var list = countryAliases[cCode];
+            for (var i = 0; i < list.length; i++) {
+                var alias = list[i];
+                var aRegex = new RegExp("(?:,\\s*|\\b)" + alias.replace(/\./g, "\\.") + "(?:\\b|$)", "i");
+                if (aRegex.test(rawPlace)) {
+                    resolvedCountryCode = cCode;
+                    resolvedCountry = list[1] ? (list[1].charAt(0).toUpperCase() + list[1].slice(1)) : alias;
+                    break;
+                }
+            }
+            if (resolvedCountry) break;
+        }
+    }
+
+    // Add country aliases
+    if (resolvedCountryCode && countryAliases[resolvedCountryCode.toUpperCase()]) {
+        countryAliases[resolvedCountryCode.toUpperCase()].forEach(function (a) {
+            aliases.add(a.toLowerCase());
+        });
+    }
+
+    if (foundState) {
+        aliases.add(foundState.toLowerCase());
+        aliases.add(foundStateCode.toLowerCase());
+    }
+
+    if (resolvedCountry) {
+        aliases.add(resolvedCountry.toLowerCase());
+    }
+
+    var offshore = getOffshoreArea(lon, lat);
+    if (offshore) {
+        aliases.add(offshore.toLowerCase());
+    }
+
+    return {
+        state: foundState,
+        stateCode: foundStateCode,
+        country: resolvedCountry,
+        countryCode: resolvedCountryCode,
+        aliases: Array.from(aliases)
+    };
+}
+
 function classifyGeography(lon, lat) {
     var championGroup = getChampionGroup(Number(lon), Number(lat));
     var country = getCountryAt(lon, lat);
@@ -365,6 +501,15 @@ function normalizeEarthquakeFeature(feature) {
     properties.shapeKey = getMagnitudeShapeKey(properties.mag);
     properties.magnitudeLabel = formatMagnitudeLabel(properties.mag);
 
+    var location = resolveLocationTokens(properties.place, properties.country, properties.countryCode, lon, lat);
+    properties.state = location.state;
+    properties.stateCode = location.stateCode;
+    if (!properties.country && location.country) {
+        properties.country = location.country;
+        properties.countryCode = location.countryCode;
+    }
+    properties.locationAliases = location.aliases;
+
     var normalized = Object.assign({}, feature, {
         geometry: Object.assign({}, feature.geometry, {
             coordinates: [lon, lat, depth].concat(coordinates.slice(3))
@@ -386,11 +531,42 @@ function markRegionalChampions(features) {
     features.forEach(function (feature) {
         var coords = feature.geometry.coordinates;
         var classification = classifyGeography(coords[0], coords[1]);
-        feature.properties.country = classification.country;
-        feature.properties.countryCode = classification.countryCode;
-        feature.properties.displayRegion = classification.displayRegion;
+        if (!feature.properties.country && classification.country) {
+            feature.properties.country = classification.country;
+            feature.properties.countryCode = classification.countryCode;
+        }
+
+        var loc = resolveLocationTokens(feature.properties.place, feature.properties.country, feature.properties.countryCode, coords[0], coords[1]);
+        if (loc.state) {
+            feature.properties.state = loc.state;
+            feature.properties.stateCode = loc.stateCode;
+        }
+        if (!feature.properties.country && loc.country) {
+            feature.properties.country = loc.country;
+            feature.properties.countryCode = loc.countryCode;
+        }
+        feature.properties.displayRegion = feature.properties.country
+            ? (feature.properties.state ? feature.properties.state + ", " + feature.properties.country : feature.properties.country)
+            : classification.displayRegion;
         feature.properties.championGroup = classification.championGroup;
         feature.properties.isChampion = false;
+
+        var depth = Number(feature.properties.depth);
+        var depthCat = depth <= 30 ? "shallow" : (depth > 70 ? "deep" : "intermediate");
+        var terms = [
+            feature.properties.place || "",
+            feature.properties.state || "",
+            feature.properties.stateCode || "",
+            feature.properties.country || "",
+            feature.properties.countryCode || "",
+            feature.properties.displayRegion || "",
+            feature.properties.championGroup || "",
+            feature.properties.type || "",
+            depthCat,
+            "m" + (feature.properties.mag !== null ? feature.properties.mag : ""),
+            "mag " + (feature.properties.mag !== null ? feature.properties.mag : "")
+        ].concat(loc.aliases);
+        feature.properties.searchIndex = terms.join(" ").toLowerCase();
 
         var mag = getNumericMagnitude(feature.properties.mag);
         var currentChampion = champions[classification.championGroup];
@@ -664,21 +840,300 @@ function getQuakeIdentity(feature) {
     return null;
 }
 
+function parseSearchQuery(query) {
+    if (!query || !String(query).trim()) {
+        return { raw: "", minMag: null, depthCategory: null, terms: [] };
+    }
+    var raw = String(query).trim().toLowerCase();
+    var minMag = null;
+    var depthCategory = null;
+
+    // Detect magnitude queries: "5+", "m5", "m5.2", "mag 4.5", "magnitude 6", ">=4.5", ">4.5", "m4+"
+    var explicitMagPattern = /\b(?:m|mag|magnitude)\s*([0-9]+(?:\.[0-9]+)?)\+?(?:\b|(?=[\s,]|$))|\b([0-9]+(?:\.[0-9]+)?)\+(?:\b|(?=[\s,]|$))|(?:>=|>)\s*([0-9]+(?:\.[0-9]+)?)/i;
+    var explicitMatch = raw.match(explicitMagPattern);
+    if (explicitMatch) {
+        var magVal = Number(explicitMatch[1] || explicitMatch[2] || explicitMatch[3]);
+        if (Number.isFinite(magVal)) {
+            minMag = magVal;
+            raw = raw.replace(explicitMagPattern, " ").trim();
+        }
+    }
+
+    // Detect depth categories: "shallow", "deep", "intermediate"
+    if (/\bshallow\b/i.test(raw)) {
+        depthCategory = "shallow";
+        raw = raw.replace(/\bshallow\b/i, " ").trim();
+    } else if (/\bdeep\b/i.test(raw)) {
+        depthCategory = "deep";
+        raw = raw.replace(/\bdeep\b/i, " ").trim();
+    } else if (/\bintermediate\b/i.test(raw)) {
+        depthCategory = "intermediate";
+        raw = raw.replace(/\bintermediate\b/i, " ").trim();
+    }
+
+    var terms = raw.split(/[\s,]+/).map(function (t) { return t.trim(); }).filter(Boolean);
+    return {
+        raw: String(query).trim(),
+        minMag: minMag,
+        depthCategory: depthCategory,
+        terms: terms
+    };
+}
+
 function matchesSearchQuery(feature, query) {
     if (!query || !String(query).trim()) {
         return true;
     }
-    var term = String(query).trim().toLowerCase();
+    var parsed = typeof query === "object" && query.terms !== undefined ? query : parseSearchQuery(query);
+    if (!parsed.terms.length && parsed.minMag === null && !parsed.depthCategory) {
+        return true;
+    }
     var props = feature && feature.properties;
     if (!props) {
         return false;
     }
-    var place = (props.place || "").toLowerCase();
-    var country = (props.country || "").toLowerCase();
-    var region = (props.displayRegion || "").toLowerCase();
-    var group = (props.championGroup || "").toLowerCase();
-    var type = (props.type || "").toLowerCase();
-    return place.includes(term) || country.includes(term) || region.includes(term) || group.includes(term) || type.includes(term);
+
+    // Check magnitude threshold from query
+    if (parsed.minMag !== null) {
+        var mag = getNumericMagnitude(props.mag);
+        if (mag === null || mag < parsed.minMag) {
+            return false;
+        }
+    }
+
+    // Check depth category from query
+    if (parsed.depthCategory) {
+        var depth = Number(props.depth);
+        if (!Number.isFinite(depth)) return false;
+        if (parsed.depthCategory === "shallow" && depth > 30) return false;
+        if (parsed.depthCategory === "deep" && depth <= 70) return false;
+        if (parsed.depthCategory === "intermediate" && (depth <= 30 || depth > 70)) return false;
+    }
+
+    if (!parsed.terms.length) {
+        return true;
+    }
+
+    var index = props.searchIndex || [
+        props.place || "",
+        props.state || "",
+        props.stateCode || "",
+        props.country || "",
+        props.countryCode || "",
+        props.displayRegion || "",
+        props.championGroup || "",
+        props.type || ""
+    ].join(" ").toLowerCase();
+
+    // Every term in the query must match
+    for (var i = 0; i < parsed.terms.length; i++) {
+        var term = parsed.terms[i];
+        if (term.length === 2) {
+            // For 2-letter codes (e.g. ca, ak, us, jp), match state/country code or word boundary
+            var wordRegex = new RegExp("(?:\\b|[^a-z0-9])" + term + "(?:\\b|[^a-z0-9])", "i");
+            var stateCode = (props.stateCode || "").toLowerCase();
+            var countryCode = (props.countryCode || "").toLowerCase();
+            if (stateCode !== term && countryCode !== term && !wordRegex.test(index)) {
+                return false;
+            }
+        } else {
+            if (!index.includes(term)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function escapeHtml(text) {
+    var div = document.createElement("div");
+    div.textContent = String(text || "");
+    return div.innerHTML;
+}
+
+function fitFeaturesBounds(features) {
+    if (!features || !features.length || !globeMap || !mapLoaded) {
+        return;
+    }
+    setAutoRotate(false);
+    if (features.length === 1) {
+        flyToQuake(features[0]);
+        return;
+    }
+
+    var minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    features.forEach(function (f) {
+        if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) return;
+        var lon = Number(f.geometry.coordinates[0]);
+        var lat = Number(f.geometry.coordinates[1]);
+        if (Number.isFinite(lon) && Number.isFinite(lat)) {
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+        }
+    });
+
+    if (!Number.isFinite(minLon)) return;
+
+    if (maxLon - minLon > 260) {
+        globeMap.flyTo({ center: [0, 20], zoom: 1.8, duration: 1800, essential: false });
+        return;
+    }
+
+    globeMap.fitBounds([[minLon, minLat], [maxLon, maxLat]], {
+        padding: { top: 70, bottom: 70, left: 70, right: 70 },
+        maxZoom: 7.5,
+        duration: 1800,
+        essential: false
+    });
+}
+
+function renderSearchSuggestions(query, matches) {
+    var searchBox = document.querySelector(".search-box");
+    if (!searchBox) return;
+
+    var container = document.getElementById("search-suggestions");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "search-suggestions";
+        container.className = "search-suggestions";
+        container.setAttribute("role", "listbox");
+        container.setAttribute("aria-label", "Search earthquake suggestions");
+        searchBox.appendChild(container);
+    }
+
+    var term = String(query || "").trim();
+    if (!term) {
+        container.hidden = true;
+        container.innerHTML = "";
+        return;
+    }
+
+    container.hidden = false;
+    container.innerHTML = "";
+
+    var header = document.createElement("div");
+    header.className = "search-suggestions-header";
+    var countText = document.createElement("span");
+    countText.className = "search-suggestions-count";
+    countText.textContent = matches.length === 1 ? "1 earthquake match" : matches.length + " earthquake matches";
+    header.appendChild(countText);
+
+    if (matches.length > 1) {
+        var zoomAllBtn = document.createElement("button");
+        zoomAllBtn.type = "button";
+        zoomAllBtn.className = "search-suggestions-zoomall";
+        zoomAllBtn.textContent = "Fit map to all";
+        zoomAllBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            fitFeaturesBounds(matches);
+            container.hidden = true;
+        });
+        header.appendChild(zoomAllBtn);
+    }
+    container.appendChild(header);
+
+    if (!matches.length) {
+        var noResults = document.createElement("div");
+        noResults.className = "search-no-results";
+        var msg = document.createElement("p");
+        var rangeLabel = getRangePresetByKey(currentRange).label;
+        msg.innerHTML = "No earthquakes matching <strong>" + escapeHtml(term) + "</strong> in the <strong>" + rangeLabel + "</strong> feed.";
+        noResults.appendChild(msg);
+
+        var quickActions = document.createElement("div");
+        quickActions.className = "search-quick-actions";
+
+        if (currentRange !== "7d") {
+            var btn7d = document.createElement("button");
+            btn7d.type = "button";
+            btn7d.className = "search-range-quickbtn";
+            btn7d.textContent = "Search 7-Day Feed";
+            btn7d.addEventListener("click", function () {
+                loadEarthquakeData("7d");
+            });
+            quickActions.appendChild(btn7d);
+        }
+        if (currentRange !== "30d") {
+            var btn30d = document.createElement("button");
+            btn30d.type = "button";
+            btn30d.className = "search-range-quickbtn";
+            btn30d.textContent = "Search 30-Day Feed";
+            btn30d.addEventListener("click", function () {
+                loadEarthquakeData("30d");
+            });
+            quickActions.appendChild(btn30d);
+        }
+        if (minMagnitude > 0) {
+            var btnResetMag = document.createElement("button");
+            btnResetMag.type = "button";
+            btnResetMag.className = "search-range-quickbtn";
+            btnResetMag.textContent = "Clear Mag Filter (All)";
+            btnResetMag.addEventListener("click", function () {
+                var allChip = document.querySelector('.mag-filter-chip[data-mag="0"]');
+                if (allChip) allChip.click();
+            });
+            quickActions.appendChild(btnResetMag);
+        }
+        noResults.appendChild(quickActions);
+        container.appendChild(noResults);
+        return;
+    }
+
+    var list = document.createElement("div");
+    list.className = "search-suggestions-list";
+    var maxItems = 6;
+    var slice = matches.slice(0, maxItems);
+
+    slice.forEach(function (feature) {
+        var props = feature.properties;
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "search-suggestion-item";
+        item.setAttribute("role", "option");
+
+        var magBadge = document.createElement("span");
+        magBadge.className = "search-item-mag";
+        var depthKey = props.depthKey || getDepthRangeKey(props.depth);
+        var def = depthRangeDefinitions.find(function (d) { return d.key === depthKey; }) || depthRangeDefinitions[0];
+        magBadge.style.backgroundColor = def.color;
+        magBadge.textContent = (props.magnitudeLabel || formatMagnitudeLabel(props.mag)) + " M";
+        item.appendChild(magBadge);
+
+        var textCol = document.createElement("div");
+        textCol.className = "search-item-text";
+
+        var title = document.createElement("div");
+        title.className = "search-item-title";
+        title.textContent = props.place || "Unknown location";
+        textCol.appendChild(title);
+
+        var meta = document.createElement("div");
+        meta.className = "search-item-meta";
+        var timeStr = formatEventTime(props.time);
+        meta.textContent = (props.depth || "0") + " km depth · " + timeStr;
+        textCol.appendChild(meta);
+
+        item.appendChild(textCol);
+
+        item.addEventListener("click", function () {
+            flyToQuake(feature);
+            container.hidden = true;
+        });
+
+        list.appendChild(item);
+    });
+
+    container.appendChild(list);
+
+    if (matches.length > maxItems) {
+        var footer = document.createElement("div");
+        footer.className = "search-suggestions-footer";
+        footer.textContent = "+ " + (matches.length - maxItems) + " more earthquakes on the map";
+        container.appendChild(footer);
+    }
 }
 
 function matchesMagnitudeFilter(magnitude, minMag) {
@@ -2006,7 +2461,13 @@ function createMap() {
                     "visibility": platesVisible ? "visible" : "none"
                 },
                 paint: {
-                    "line-color": "#f59e0b",
+                    "line-color": [
+                        "match",
+                        ["get", "type"],
+                        "Convergent (Subduction / Trench)", "#f43f5e",
+                        "Divergent (Spreading Ridge / Rift)", "#38bdf8",
+                        "#f59e0b"
+                    ],
                     "line-width": 5,
                     "line-opacity": 0.45,
                     "line-blur": 2
@@ -2023,10 +2484,16 @@ function createMap() {
                     "visibility": platesVisible ? "visible" : "none"
                 },
                 paint: {
-                    "line-color": "#fbbf24",
-                    "line-width": 1.75,
-                    "line-opacity": 0.85,
-                    "line-dasharray": [3, 2]
+                    "line-color": [
+                        "match",
+                        ["get", "type"],
+                        "Convergent (Subduction / Trench)", "#fb7185",
+                        "Divergent (Spreading Ridge / Rift)", "#7dd3fc",
+                        "#fbbf24"
+                    ],
+                    "line-width": 1.85,
+                    "line-opacity": 0.9,
+                    "line-dasharray": [3, 1.5]
                 }
             });
 
@@ -2035,14 +2502,19 @@ function createMap() {
                 if (!feature || !feature.properties) return;
                 var props = feature.properties;
                 var popupContent = document.createElement("div");
-                popupContent.className = "quake-popup";
+                popupContent.className = "quake-popup plate-popup";
                 var title = document.createElement("h3");
                 title.textContent = props.name || "Tectonic Plate Boundary";
                 popupContent.appendChild(title);
                 if (props.type) appendPopupRow(popupContent, "Boundary type", props.type);
-                if (props.plates) appendPopupRow(popupContent, "Plates", props.plates, true);
+                if (props.plateA && props.plateB) {
+                    appendPopupRow(popupContent, "Plates", props.plateA + " / " + props.plateB, true);
+                } else if (props.plates) {
+                    appendPopupRow(popupContent, "Plates", props.plates, true);
+                }
+                if (props.source) appendPopupRow(popupContent, "Dataset model", props.source, true);
 
-                new maplibregl.Popup({ maxWidth: "300px" })
+                new maplibregl.Popup({ maxWidth: "320px", offset: 8 })
                     .setLngLat(event.lngLat)
                     .setDOMContent(popupContent)
                     .addTo(globeMap);
@@ -2518,6 +2990,10 @@ window.earthquakeApp.test = {
     transitionChampionPingMotion: transitionChampionPingMotion,
     updateSummary: updateSummary,
     matchesSearchQuery: matchesSearchQuery,
+    parseSearchQuery: parseSearchQuery,
+    resolveLocationTokens: resolveLocationTokens,
+    fitFeaturesBounds: fitFeaturesBounds,
+    renderSearchSuggestions: renderSearchSuggestions,
     matchesMagnitudeFilter: matchesMagnitudeFilter,
     getFilteredFeatures: getFilteredFeatures,
     setTectonicPlatesVisibility: setTectonicPlatesVisibility,
@@ -2571,17 +3047,48 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             refreshEarthquakeSource();
             renderFeedDrawer();
-            updateSummary(getVisibleGeojson());
+            var visible = getVisibleGeojson();
+            updateSummary(visible);
+            renderSearchSuggestions(searchQuery, visible.features);
         });
+
+        searchInput.addEventListener("focus", function () {
+            if (searchQuery) {
+                var visible = getVisibleGeojson();
+                renderSearchSuggestions(searchQuery, visible.features);
+            }
+        });
+
         searchInput.addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
+                event.preventDefault();
                 var matches = getVisibleGeojson().features;
                 if (matches.length) {
-                    flyToQuake(matches[0]);
+                    fitFeaturesBounds(matches);
+                    var container = document.getElementById("search-suggestions");
+                    if (container) container.hidden = true;
                 }
+            } else if (event.key === "Escape") {
+                searchQuery = "";
+                searchInput.value = "";
+                if (clearSearchBtn) clearSearchBtn.hidden = true;
+                refreshEarthquakeSource();
+                renderFeedDrawer();
+                updateSummary(getVisibleGeojson());
+                var container = document.getElementById("search-suggestions");
+                if (container) container.hidden = true;
             }
         });
     }
+
+    document.addEventListener("click", function (event) {
+        var searchBox = document.querySelector(".search-box");
+        if (searchBox && !searchBox.contains(event.target)) {
+            var container = document.getElementById("search-suggestions");
+            if (container) container.hidden = true;
+        }
+    });
+
     if (clearSearchBtn) {
         clearSearchBtn.addEventListener("click", function () {
             searchQuery = "";
@@ -2590,6 +3097,9 @@ document.addEventListener("DOMContentLoaded", function () {
             refreshEarthquakeSource();
             renderFeedDrawer();
             updateSummary(getVisibleGeojson());
+            var container = document.getElementById("search-suggestions");
+            if (container) container.hidden = true;
+            resetGlobeView();
         });
     }
 
