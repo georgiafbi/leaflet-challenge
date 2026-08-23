@@ -2647,8 +2647,8 @@ function initAirshipModule() {
                         var remaining = inst.model.pingEndTime - timestamp;
                         if (remaining > 0) {
                             var pulse = Math.sin(timestamp * 0.009) * 0.5 + 0.5;
-                            inst.model.lanternLight.intensity = 3.5 + pulse * 4.5;
-                            inst.model.lanternGlassMat.emissiveIntensity = 1.8 + pulse * 1.8;
+                            inst.model.lanternLight.intensity = 3.2 + pulse * 2.0;
+                            inst.model.lanternGlassMat.emissiveIntensity = 1.7 + pulse * 1.0;
                         } else {
                             inst.model.pingEndTime = 0;
                             inst.model.currentPingColor = null;
@@ -2925,9 +2925,9 @@ function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
                 inst.model.currentPingColor = colorHex;
                 inst.model.pingEndTime = performance.now() + 4500;
                 inst.model.lanternLight.color.setHex(colorHex);
-                inst.model.lanternLight.intensity = 7.5;
+                inst.model.lanternLight.intensity = 5.0;
                 inst.model.lanternGlassMat.emissive.setHex(colorHex);
-                inst.model.lanternGlassMat.emissiveIntensity = 3.2;
+                inst.model.lanternGlassMat.emissiveIntensity = 2.2;
             }
         }
     });
@@ -2939,9 +2939,9 @@ function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
             m.currentPingColor = colorHex;
             m.pingEndTime = performance.now() + 4500;
             m.lanternLight.color.setHex(colorHex);
-            m.lanternLight.intensity = 7.5;
+            m.lanternLight.intensity = 5.0;
             m.lanternGlassMat.emissive.setHex(colorHex);
-            m.lanternGlassMat.emissiveIntensity = 3.2;
+            m.lanternGlassMat.emissiveIntensity = 2.2;
         }
     }
 }
@@ -3533,8 +3533,8 @@ function init3DAirshipInspector(container, vesselIdx) {
             var rem = airship3D.pingEndTime - performance.now();
             if (rem > 0) {
                 var p = Math.sin(performance.now() * 0.009) * 0.5 + 0.5;
-                airship3D.lanternLight.intensity = 3.5 + p * 4.5;
-                airship3D.lanternGlassMat.emissiveIntensity = 1.8 + p * 1.8;
+                airship3D.lanternLight.intensity = 3.2 + p * 2.0;
+                airship3D.lanternGlassMat.emissiveIntensity = 1.7 + p * 1.0;
             } else {
                 airship3D.pingEndTime = 0;
                 airship3D.currentPingColor = null;
@@ -4770,7 +4770,7 @@ function createMap() {
                 }
             });
 
-            // Depth ping sonar ring on ground
+            // Depth ping sonar ring on ground (kept subtle: small, translucent)
             globeMap.addLayer({
                 id: "airship-depth-ping",
                 type: "circle",
@@ -4781,9 +4781,9 @@ function createMap() {
                 paint: {
                     "circle-radius": [
                         "interpolate", ["linear"], ["zoom"],
-                        1, 26,
-                        5, 52,
-                        9, 85
+                        1, 13,
+                        5, 26,
+                        9, 42
                     ],
                     "circle-color": [
                         "case",
@@ -4791,8 +4791,8 @@ function createMap() {
                         ["coalesce", ["get", "pingColor"], "#fbbf24"],
                         "rgba(0, 0, 0, 0)"
                     ],
-                    "circle-blur": 0.55,
-                    "circle-stroke-width": 2.5,
+                    "circle-blur": 0.7,
+                    "circle-stroke-width": 1.25,
                     "circle-stroke-color": [
                         "case",
                         ["==", ["get", "isPinging"], true],
@@ -4802,13 +4802,13 @@ function createMap() {
                     "circle-opacity": [
                         "case",
                         ["==", ["get", "isPinging"], true],
-                        0.85,
+                        0.3,
                         0.0
                     ],
                     "circle-stroke-opacity": [
                         "case",
                         ["==", ["get", "isPinging"], true],
-                        0.95,
+                        0.55,
                         0.0
                     ]
                 }
