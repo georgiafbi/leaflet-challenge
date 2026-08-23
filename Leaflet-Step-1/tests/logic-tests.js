@@ -556,6 +556,42 @@
         }
     });
 
+    test("verifies distinct steam whistle audio profiles for all three airships", function () {
+        var profiles = helpers.AIRSHIP_WHISTLE_PROFILES;
+        assert(Array.isArray(profiles) && profiles.length === 3, "has 3 distinct whistle profiles");
+
+        var aetheria = profiles[0];
+        assertEqual(aetheria.name, "HMS Aetheria", "Aetheria profile name");
+        assertEqual(aetheria.oscType, "sawtooth", "Aetheria sawtooth waveform");
+        assert(Array.isArray(aetheria.frequencies) && aetheria.frequencies.length === 3, "Aetheria 3-chime chord");
+
+        var equinox = profiles[1];
+        assertEqual(equinox.name, "HMS Equinox", "Equinox profile name");
+        assertEqual(equinox.oscType, "triangle", "Equinox triangle fluted waveform");
+        assert(Array.isArray(equinox.frequencies) && equinox.frequencies.length === 4, "Equinox clarion chime chord");
+
+        var australis = profiles[2];
+        assertEqual(australis.name, "HMS Australis", "Australis profile name");
+        assertEqual(australis.oscType, "sawtooth", "Australis sawtooth waveform");
+        assert(Array.isArray(australis.frequencies) && australis.frequencies[0] < 200, "Australis deep sub-200Hz bass foghorn");
+    });
+
+    test("maps latitudes to correct airship orbital zones and triggers depth pings", function () {
+        assertEqual(helpers.getAirshipVesselForLatitude(45.0), 0, "45°N mapped to HMS Aetheria (Northern)");
+        assertEqual(helpers.getAirshipVesselForLatitude(15.0), 0, "15°N mapped to HMS Aetheria (Northern)");
+        assertEqual(helpers.getAirshipVesselForLatitude(0.0), 1, "0° mapped to HMS Equinox (Equatorial)");
+        assertEqual(helpers.getAirshipVesselForLatitude(-10.0), 1, "-10° mapped to HMS Equinox (Equatorial)");
+        assertEqual(helpers.getAirshipVesselForLatitude(-25.0), 2, "-25° mapped to HMS Australis (Southern)");
+        assertEqual(helpers.getAirshipVesselForLatitude(-75.0), 2, "-75° mapped to HMS Australis (Southern)");
+
+        var testQuake = {
+            properties: { eventId: "test-eq-1", depthKey: "70-90", time: Date.now() },
+            geometry: { coordinates: [139.69, 35.68, 82.5] }
+        };
+        // Should execute cleanly without throwing
+        helpers.triggerAirshipDetectionPing(0, testQuake, false);
+    });
+
     test("toggles quick guide modal open and closed with accessibility attributes", function () {
         var backdrop = document.getElementById("guide-modal-backdrop");
         if (!backdrop) {

@@ -1240,6 +1240,10 @@ function flyToQuake(feature) {
     var coords = feature.geometry.coordinates.slice(0, 2);
     globeMap.flyTo({ center: coords, zoom: 4.5, duration: 2200, essential: false });
     openQuakePopup(coords, feature.properties);
+
+    // Trigger regional airship whistle & light ping to depth color
+    var vIdx = getAirshipVesselForLatitude(feature.geometry.coordinates[1]);
+    triggerAirshipDetectionPing(vIdx, feature, true);
 }
 
 function resetGlobeView() {
@@ -2463,7 +2467,22 @@ function initAirshipModule() {
                     // Pitch & Banking into the curve
                     inst.model.group.rotation.z = Math.sin(t * 1.6 + inst.vIdx) * 0.12 - 0.05;
                     inst.model.group.rotation.x = Math.sin(t * 1.2 + inst.vIdx) * 0.08 + 0.1;
-                    inst.model.group.position.y = Math.sin(t * 1.5 + inst.vIdx) * 0.25;
+                    // Handle fading of lantern depth ping light back to default lantern color
+                    if (inst.model.pingEndTime) {
+                        var remaining = inst.model.pingEndTime - timestamp;
+                        if (remaining > 0) {
+                            var pulse = Math.sin(timestamp * 0.009) * 0.5 + 0.5;
+                            inst.model.lanternLight.intensity = 3.5 + pulse * 4.5;
+                            inst.model.lanternGlassMat.emissiveIntensity = 1.8 + pulse * 1.8;
+                        } else {
+                            inst.model.pingEndTime = 0;
+                            inst.model.currentPingColor = null;
+                            inst.model.lanternLight.color.setHex(inst.model.defaultLanternColor);
+                            inst.model.lanternLight.intensity = 2.8;
+                            inst.model.lanternGlassMat.emissive.setHex(inst.model.defaultLanternColor);
+                            inst.model.lanternGlassMat.emissiveIntensity = 1.6;
+                        }
+                    }
 
                     inst.renderer.render(inst.scene, inst.camera);
                 }
@@ -2548,7 +2567,61 @@ function toggleFollowAirship(forcedState, targetVesselIdx) {
     }
 }
 
-function soundSteamWhistle() {
+var AIRSHIP_WHISTLE_PROFILES = [
+    // 0: HMS Aetheria — Classic Victorian 3-Chime Brass Steam Whistle (D Major Triad)
+    {
+        name: "HMS Aetheria",
+        title: "Victorian 3-Chime Steam Whistle",
+        oscType: "sawtooth",
+        frequencies: [587.33, 739.99, 880.00], // D5, F#5, A5
+        attack: 0.12,
+        sustain: 0.70,
+        release: 0.45,
+        totalDuration: 1.30,
+        pitchBend: 1.025,
+        filterType: "lowpass",
+        filterFreq: 3400,
+        gainLevel: 0.20,
+        vibratoRate: 5.5,
+        vibratoDepth: 3.5
+    },
+    // 1: HMS Equinox — Clarion Melodic Celestial/Maritime Siren (E Major Clarion)
+    {
+        name: "HMS Equinox",
+        title: "Clarion Fluted Siren",
+        oscType: "triangle",
+        frequencies: [659.25, 830.61, 987.77, 1318.51], // E5, G#5, B5, E6
+        attack: 0.08,
+        sustain: 0.60,
+        release: 0.45,
+        totalDuration: 1.15,
+        pitchBend: 1.018,
+        filterType: "lowpass",
+        filterFreq: 5200,
+        gainLevel: 0.22,
+        vibratoRate: 7.2,
+        vibratoDepth: 2.0
+    },
+    // 2: HMS Australis — Deep Resonant Sub-Antarctic Dreadnought Foghorn (G Minor / Low Brass)
+    {
+        name: "HMS Australis",
+        title: "Dreadnought Resonant Foghorn",
+        oscType: "sawtooth",
+        frequencies: [196.00, 293.66, 392.00, 466.16], // G3, D4, G4, Bb4
+        attack: 0.20,
+        sustain: 0.85,
+        release: 0.65,
+        totalDuration: 1.70,
+        pitchBend: 0.985,
+        filterType: "lowpass",
+        filterFreq: 1650,
+        gainLevel: 0.26,
+        vibratoRate: 3.2,
+        vibratoDepth: 4.5
+    }
+];
+
+function soundSteamWhistle(targetVesselIdx) {
     try {
         if (!airshipAudioCtx) {
             var AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -2559,26 +2632,46 @@ function soundSteamWhistle() {
         }
         if (!airshipAudioCtx) return;
 
-        var now = airshipAudioCtx.currentTime;
-        // Harmonic whistle chords: D5 (587 Hz), F#5 (740 Hz), A5 (880 Hz)
-        var freqs = [587.3, 739.9, 880.0];
-        var masterGain = airshipAudioCtx.createGain();
-        masterGain.gain.setValueAtTime(0.001, now);
-        masterGain.gain.exponentialRampToValueAtTime(0.18, now + 0.15);
-        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-        masterGain.connect(airshipAudioCtx.destination);
+        var vIdx = typeof targetVesselIdx === "number" ? targetVesselIdx : (typeof followedVesselIndex === "number" ? followedVesselIndex : 0);
+        var profile = AIRSHIP_WHISTLE_PROFILES[vIdx] || AIRSHIP_WHISTLE_PROFILES[0];
 
-        freqs.forEach(function (f) {
+        var now = airshipAudioCtx.currentTime;
+        var masterGain = airshipAudioCtx.createGain();
+        var filter = airshipAudioCtx.createBiquadFilter();
+        filter.type = profile.filterType || "lowpass";
+        filter.frequency.setValueAtTime(profile.filterFreq || 3000, now);
+
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.exponentialRampToValueAtTime(profile.gainLevel || 0.22, now + profile.attack);
+        masterGain.gain.setValueAtTime(profile.gainLevel || 0.22, now + profile.attack + profile.sustain);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + profile.totalDuration);
+
+        masterGain.connect(filter);
+        filter.connect(airshipAudioCtx.destination);
+
+        // LFO for acoustic steam pressure vibrato/flutter
+        var lfo = airshipAudioCtx.createOscillator();
+        var lfoGain = airshipAudioCtx.createGain();
+        lfo.frequency.setValueAtTime(profile.vibratoRate || 5.0, now);
+        lfoGain.gain.setValueAtTime(profile.vibratoDepth || 3.0, now);
+        lfo.connect(lfoGain);
+        lfo.start(now);
+        lfo.stop(now + profile.totalDuration);
+
+        profile.frequencies.forEach(function (f) {
             var osc = airshipAudioCtx.createOscillator();
-            osc.type = "sawtooth";
+            osc.type = profile.oscType || "sawtooth";
             osc.frequency.setValueAtTime(f, now);
-            osc.frequency.linearRampToValueAtTime(f * 1.02, now + 0.5);
+            osc.frequency.linearRampToValueAtTime(f * profile.pitchBend, now + profile.attack + profile.sustain);
+            lfoGain.connect(osc.frequency);
+
             var oscGain = airshipAudioCtx.createGain();
-            oscGain.gain.value = 0.33;
+            oscGain.gain.value = 1.0 / profile.frequencies.length;
             osc.connect(oscGain);
             oscGain.connect(masterGain);
+
             osc.start(now);
-            osc.stop(now + 1.25);
+            osc.stop(now + profile.totalDuration + 0.05);
         });
 
         // Trigger visual steam puff animation on popup
@@ -2591,6 +2684,85 @@ function soundSteamWhistle() {
     } catch (e) {
         console.log("Audio whistle playback omitted:", e);
     }
+}
+
+var lastSignaledQuakeIds = { 0: null, 1: null, 2: null };
+
+function getAirshipVesselForLatitude(lat) {
+    if (typeof lat !== "number" || isNaN(lat)) return 0;
+    if (lat >= 15.0) {
+        return 0; // HMS Aetheria (Northern Hemisphere & North Pacific/Atlantic)
+    } else if (lat > -15.0) {
+        return 1; // HMS Equinox (Equatorial Ring of Fire & Tropics)
+    } else {
+        return 2; // HMS Australis (Southern Hemisphere, Andes, NZ)
+    }
+}
+
+function triggerAirshipDetectionPing(vIdx, quakeFeature, shouldWhistle) {
+    if (!quakeFeature || typeof vIdx !== "number") return;
+    var depthKey = quakeFeature.properties && quakeFeature.properties.depthKey;
+    var depthDef = depthRangeDefinitions.find(function (r) { return r.key === depthKey; }) || depthRangeDefinitions[0];
+    var pingColor = depthDef.color;
+    var colorHex = parseInt(pingColor.replace("#", "0x"), 16);
+
+    // Whistle sound for that vessel
+    if (shouldWhistle !== false) {
+        soundSteamWhistle(vIdx);
+    }
+
+    // Apply visual ping to map marker
+    airship3DMarkers.forEach(function (inst) {
+        if (inst.vIdx === vIdx) {
+            inst.el.style.setProperty("--ping-depth-color", pingColor);
+            inst.el.classList.remove("is-depth-pinging");
+            void inst.el.offsetWidth; // Force reflow
+            inst.el.classList.add("is-depth-pinging");
+
+            if (inst.model && inst.model.lanternLight && inst.model.lanternGlassMat) {
+                inst.model.currentPingColor = colorHex;
+                inst.model.pingEndTime = performance.now() + 4500;
+                inst.model.lanternLight.color.setHex(colorHex);
+                inst.model.lanternLight.intensity = 7.5;
+                inst.model.lanternGlassMat.emissive.setHex(colorHex);
+                inst.model.lanternGlassMat.emissiveIntensity = 3.2;
+            }
+        }
+    });
+
+    // Also update active 3D drawer inspector if open on this ship
+    if (activeDrawer3DInspector && activeDrawer3DInspector.model && followedVesselIndex === vIdx) {
+        var m = activeDrawer3DInspector.model;
+        if (m.lanternLight && m.lanternGlassMat) {
+            m.currentPingColor = colorHex;
+            m.pingEndTime = performance.now() + 4500;
+            m.lanternLight.color.setHex(colorHex);
+            m.lanternLight.intensity = 7.5;
+            m.lanternGlassMat.emissive.setHex(colorHex);
+            m.lanternGlassMat.emissiveIntensity = 3.2;
+        }
+    }
+}
+
+function checkRegionalEarthquakePings(features, isInitial) {
+    if (!Array.isArray(features) || !features.length) return;
+    var sorted = features.slice().sort(function (a, b) {
+        return (b.properties.time || 0) - (a.properties.time || 0);
+    });
+
+    [0, 1, 2].forEach(function (vIdx) {
+        var regional = sorted.filter(function (f) {
+            return getAirshipVesselForLatitude(f.geometry.coordinates[1]) === vIdx;
+        });
+        if (regional.length > 0) {
+            var newest = regional[0];
+            var eventId = newest.properties.eventId;
+            if (lastSignaledQuakeIds[vIdx] !== eventId) {
+                triggerAirshipDetectionPing(vIdx, newest, !isInitial);
+                lastSignaledQuakeIds[vIdx] = eventId;
+            }
+        }
+    });
 }
 
 function build3DAirshipMesh(THREE, vesselIdx) {
@@ -3036,7 +3208,17 @@ function build3DAirshipMesh(THREE, vesselIdx) {
         }
     });
 
-    return { group: ship, props: props, exhaustParticles: exhaustParticles, lanternGroup: lanternGroup };
+    return {
+        group: ship,
+        props: props,
+        exhaustParticles: exhaustParticles,
+        lanternGroup: lanternGroup,
+        lanternGlassMat: lanternGlassMat,
+        lanternLight: lanternLight,
+        defaultLanternColor: lanternColor,
+        currentPingColor: null,
+        pingEndTime: 0
+    };
 }
 
 function init3DAirshipInspector(container, vesselIdx) {
@@ -3144,11 +3326,29 @@ function init3DAirshipInspector(container, vesselIdx) {
             airship3D.group.rotation.z = Math.sin(t * 0.8) * 0.05;
         }
 
+        // Lantern depth ping animation for inspector
+        if (airship3D.pingEndTime) {
+            var rem = airship3D.pingEndTime - performance.now();
+            if (rem > 0) {
+                var p = Math.sin(performance.now() * 0.009) * 0.5 + 0.5;
+                airship3D.lanternLight.intensity = 3.5 + p * 4.5;
+                airship3D.lanternGlassMat.emissiveIntensity = 1.8 + p * 1.8;
+            } else {
+                airship3D.pingEndTime = 0;
+                airship3D.currentPingColor = null;
+                airship3D.lanternLight.color.setHex(airship3D.defaultLanternColor);
+                airship3D.lanternLight.intensity = 2.8;
+                airship3D.lanternGlassMat.emissive.setHex(airship3D.defaultLanternColor);
+                airship3D.lanternGlassMat.emissiveIntensity = 1.6;
+            }
+        }
+
         renderer.render(scene, camera);
     }
     renderLoop();
 
     return {
+        model: airship3D,
         destroy: function () {
             if (animId) cancelAnimationFrame(animId);
             container.removeEventListener("mousedown", onPointerDown);
@@ -3226,6 +3426,12 @@ function showAirshipPopup(lngLat, targetVesselIdx) {
         if (followBtn) {
             followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
             followBtn.textContent = isFollowingAirship ? "🛰️ Lock Camera" : "🛰️ Track Orbit";
+        }
+
+        var whistleBtn = document.getElementById("airship-drawer-whistle-btn");
+        if (whistleBtn) {
+            var whistleProf = AIRSHIP_WHISTLE_PROFILES[vIdx] || AIRSHIP_WHISTLE_PROFILES[0];
+            whistleBtn.title = "Blow " + pos.name + "'s " + whistleProf.title;
         }
 
         drawer.hidden = false;
@@ -4491,6 +4697,8 @@ function loadEarthquakeData(rangeKey) {
                 refreshEarthquakeSource();
                 syncChampionPingMotion();
             }
+
+            checkRegionalEarthquakePings(features, !hasSuccessfulFeed);
         })
         .catch(function (error) {
             if (seq !== requestSeq || error.name === "AbortError") {
@@ -4586,6 +4794,10 @@ window.earthquakeApp.test = {
     toggleFollowAirship: toggleFollowAirship,
     flyToAirship: flyToAirship,
     soundSteamWhistle: soundSteamWhistle,
+    AIRSHIP_WHISTLE_PROFILES: AIRSHIP_WHISTLE_PROFILES,
+    getAirshipVesselForLatitude: getAirshipVesselForLatitude,
+    triggerAirshipDetectionPing: triggerAirshipDetectionPing,
+    checkRegionalEarthquakePings: checkRegionalEarthquakePings,
     airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,
