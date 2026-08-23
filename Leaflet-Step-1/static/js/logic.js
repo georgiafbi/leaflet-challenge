@@ -2352,19 +2352,19 @@ function initAirshipModule() {
             el.setAttribute("aria-label", vessel.name + " 3D Airship Expedition");
 
             var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(140, 90);
+            renderer.setSize(96, 56);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             renderer.shadowMap.enabled = false;
             el.appendChild(renderer.domElement);
 
             var scene = new THREE.Scene();
-            // 3/4 Isometric Aerial Perspective Camera: elevated so the top hull, deck, both nacelles, and fins are fully volumetric!
-            var camera = new THREE.PerspectiveCamera(38, 140 / 90, 0.1, 100);
-            camera.position.set(2.8, 5.2, 12.2);
-            camera.lookAt(0, -0.3, 0);
+            // 3/4 Isometric Aerial Perspective Camera
+            var camera = new THREE.PerspectiveCamera(36, 96 / 56, 0.1, 100);
+            camera.position.set(2.4, 4.4, 10.5);
+            camera.lookAt(0, -0.2, 0);
 
             // Rich 3-Point Studio Lighting for dramatic volumetric specular curves
-            var amb = new THREE.AmbientLight(0xffedd5, 1.1);
+            var amb = new THREE.AmbientLight(0xffedd5, 1.15);
             scene.add(amb);
 
             var keySun = new THREE.DirectionalLight(0xfffbeb, 2.8);
@@ -2381,33 +2381,9 @@ function initAirshipModule() {
 
             var model = build3DAirshipMesh(THREE, vIdx);
             if (model) {
+                model.group.scale.setScalar(0.72);
                 scene.add(model.group);
             }
-
-            // Create Soft Radial 3D Ground Shadow Texture
-            var shadowCanvas = document.createElement("canvas");
-            shadowCanvas.width = 128;
-            shadowCanvas.height = 64;
-            var sCtx = shadowCanvas.getContext("2d");
-            var sGrad = sCtx.createRadialGradient(64, 32, 2, 64, 32, 60);
-            sGrad.addColorStop(0, "rgba(2, 6, 23, 0.8)");
-            sGrad.addColorStop(0.4, "rgba(2, 6, 23, 0.35)");
-            sGrad.addColorStop(1, "rgba(2, 6, 23, 0)");
-            sCtx.fillStyle = sGrad;
-            sCtx.fillRect(0, 0, 128, 64);
-            var shadowTex = new THREE.CanvasTexture(shadowCanvas);
-
-            var shadowGeo = new THREE.PlaneGeometry(9.0, 4.2);
-            var shadowMat = new THREE.MeshBasicMaterial({
-                map: shadowTex,
-                transparent: true,
-                opacity: 0.55,
-                depthWrite: false
-            });
-            var shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-            shadowMesh.rotation.x = -Math.PI / 2;
-            shadowMesh.position.set(0.2, -3.8, 0);
-            scene.add(shadowMesh);
 
             var marker = new maplibregl.Marker({ element: el, anchor: "center" })
                 .setLngLat([0, 0])
@@ -2425,7 +2401,6 @@ function initAirshipModule() {
                 scene: scene,
                 camera: camera,
                 model: model,
-                shadowMesh: shadowMesh,
                 marker: marker
             });
         });
@@ -2438,7 +2413,8 @@ function initAirshipModule() {
         var dt = Math.min(elapsed / 1000, 0.1);
 
         if (airshipVisible) {
-            airshipProgress = (airshipProgress + (elapsed / 120000)) % 1.0;
+            // Faster orbital speed: ~42 seconds per complete planetary orbit
+            airshipProgress = (airshipProgress + (elapsed / 42000)) % 1.0;
             var positions = getAllAirshipPositions(airshipProgress);
             var src = globeMap.getSource("airship");
             if (src) {
@@ -2456,11 +2432,11 @@ function initAirshipModule() {
 
                 if (inst.model) {
                     // High-speed 3D Propeller Rotation
-                    inst.model.props.forEach(function (p) { p.rotation.x += dt * 55; });
+                    inst.model.props.forEach(function (p) { p.rotation.x += dt * 65; });
 
                     // Billowing 3D Steam Exhaust
                     inst.model.exhaustParticles.forEach(function (ep, i) {
-                        ep.mesh.position.x = -1.0 - ((t * 2.8 + i * 0.45) % 2.6);
+                        ep.mesh.position.x = -1.0 - ((t * 3.2 + i * 0.45) % 2.6);
                         var fade = 1.0 - (Math.abs(ep.mesh.position.x + 1.0) / 2.6);
                         ep.mesh.scale.setScalar(0.8 + (1.0 - fade) * 1.8);
                         ep.mesh.material.opacity = Math.max(0, fade * 0.5);
@@ -2476,12 +2452,6 @@ function initAirshipModule() {
                     inst.model.group.rotation.z = Math.sin(t * 1.6 + inst.vIdx) * 0.12 - 0.05;
                     inst.model.group.rotation.x = Math.sin(t * 1.2 + inst.vIdx) * 0.08 + 0.1;
                     inst.model.group.position.y = Math.sin(t * 1.5 + inst.vIdx) * 0.25;
-
-                    // Dynamic ground shadow response
-                    if (inst.shadowMesh) {
-                        inst.shadowMesh.scale.setScalar(1.0 - inst.model.group.position.y * 0.3);
-                        inst.shadowMesh.material.opacity = 0.42 - inst.model.group.position.y * 0.15;
-                    }
 
                     inst.renderer.render(inst.scene, inst.camera);
                 }
@@ -2976,20 +2946,6 @@ function build3DAirshipMesh(THREE, vesselIdx) {
     lanternLight.position.set(0, -0.6, 0);
     lanternGroup.add(lanternLight);
 
-    // Volumetric Forward Warm Aura Cone
-    var coneGeo = new THREE.ConeGeometry(3.2, 9.5, 24, 1, true);
-    var coneMat = new THREE.MeshBasicMaterial({
-        color: 0xfef08a,
-        transparent: true,
-        opacity: 0.28,
-        side: THREE.DoubleSide,
-        depthWrite: false
-    });
-    var coneMesh = new THREE.Mesh(coneGeo, coneMat);
-    coneMesh.position.set(0.5, -4.8, 0);
-    coneMesh.rotation.z = -Math.PI / 3.4;
-    lanternGroup.add(coneMesh);
-
     ship.add(lanternGroup);
 
     // 4. PROPELLERS & STEAM ENGINES
@@ -3062,7 +3018,7 @@ function build3DAirshipMesh(THREE, vesselIdx) {
         }
     });
 
-    return { group: ship, props: props, exhaustParticles: exhaustParticles, coneMesh: coneMesh, lanternGroup: lanternGroup };
+    return { group: ship, props: props, exhaustParticles: exhaustParticles, lanternGroup: lanternGroup };
 }
 
 function init3DAirshipInspector(container) {

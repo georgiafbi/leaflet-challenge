@@ -552,7 +552,6 @@
             assert(model.group.children.length >= 8, "has hull, nose cap, fins, ribs, gondola, and engines");
             assert(Array.isArray(model.props) && model.props.length >= 2, "has 3D propellers (stern and outriggers)");
             assert(Array.isArray(model.exhaustParticles) && model.exhaustParticles.length >= 4, "has steam exhaust particles");
-            assert(model.coneMesh, "has volumetric searchlight cone");
             assert(model.lanternGroup, "has signature hanging glowing lantern");
         }
     });

@@ -2326,18 +2326,18 @@ body {
 
 /* 3D Realtime Map Marker floating above globe */
 .airship-3d-marker {
-  width: 120px;
-  height: 70px;
+  width: 96px;
+  height: 56px;
   cursor: pointer;
   pointer-events: auto;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.88));
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.85));
   transition: transform 0.15s ease-out, filter 0.15s ease-out;
   transform-origin: center center;
 }
 
 .airship-3d-marker:hover {
-  filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)) drop-shadow(0 14px 28px rgba(0, 0, 0, 0.95));
-  transform: scale(1.18);
+  filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)) drop-shadow(0 12px 24px rgba(0, 0, 0, 0.95));
+  transform: scale(1.15);
 }
 
 .airship-3d-marker canvas {
