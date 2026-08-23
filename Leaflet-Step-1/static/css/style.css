@@ -912,9 +912,10 @@ body {
   }
 
   .base-panel.is-expanded {
-    top: 64px;
     width: min(210px, calc(100% - 72px));
     padding: 4px 12px 10px;
+    max-height: calc(100% - 16px);
+    overflow-y: auto;
   }
 
   .base-panel-header {
@@ -2534,10 +2535,6 @@ body {
 }
 
 @media (max-width: 360px) {
-  .base-panel {
-    top: 64px;
-  }
-
   .stats-panel {
     grid-template-columns: 1fr;
   }
