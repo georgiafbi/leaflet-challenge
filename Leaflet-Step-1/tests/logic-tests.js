@@ -556,6 +556,12 @@
         }
     });
 
+    test("keeps live 3D airships on compact viewports when Three.js is available", function () {
+        assertEqual(helpers.shouldUseLive3DAirshipMarkers(true, {}), true, "mobile should retain live 3D markers");
+        assertEqual(helpers.shouldUseLive3DAirshipMarkers(false, {}), true, "desktop should retain live 3D markers");
+        assertEqual(helpers.shouldUseLive3DAirshipMarkers(false, null), false, "missing Three.js should use sprite fallback");
+    });
+
     test("verifies distinct steam whistle audio profiles for all three airships", function () {
         var profiles = helpers.AIRSHIP_WHISTLE_PROFILES;
         assert(Array.isArray(profiles) && profiles.length === 3, "has 3 distinct whistle profiles");

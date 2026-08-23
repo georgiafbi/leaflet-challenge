@@ -2483,6 +2483,10 @@ function getAirshipGeoJSON(positions) {
 
 var airship3DMarkers = [];
 
+function shouldUseLive3DAirshipMarkers(isCompactViewport, hasThreeJs) {
+    return Boolean(hasThreeJs);
+}
+
 function isCoordVisibleOnGlobe(lon, lat) {
     if (!globeMap) return true;
     try {
@@ -2503,14 +2507,29 @@ function initAirshipModule() {
     if (!globeMap) return;
 
     // Clean up existing 3D markers if any
+    var renderersToDispose = new Set();
     airship3DMarkers.forEach(function (inst) {
         if (inst.marker) inst.marker.remove();
-        if (inst.renderer) inst.renderer.dispose();
+        if (inst.renderer) renderersToDispose.add(inst.renderer);
+    });
+    renderersToDispose.forEach(function (renderer) {
+        renderer.dispose();
+        if (typeof renderer.forceContextLoss === "function") {
+            renderer.forceContextLoss();
+        }
     });
     airship3DMarkers = [];
 
-    // Create live Three.js 3D markers for all fleet vessels
-    if (window.THREE) {
+    // A single shared Three.js renderer draws every vessel into its own 2D
+    // marker canvas. This preserves animated 3D airships while avoiding nine
+    // WebGL contexts, which can evict MapLibre's context on mobile browsers.
+    var useLive3DMarkers = shouldUseLive3DAirshipMarkers(compactViewportQuery.matches, window.THREE);
+    if (useLive3DMarkers) {
+        var sharedRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+        sharedRenderer.setSize(76, 44, false);
+        sharedRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        sharedRenderer.shadowMap.enabled = false;
+
         SATELLITE_FLEET.forEach(function (vessel, vIdx) {
             var themeIdx = getFleetThemeIndex(vIdx);
             var el = document.createElement("div");
@@ -2523,11 +2542,12 @@ function initAirshipModule() {
             innerEl.className = "airship-marker-inner";
             el.appendChild(innerEl);
 
-            var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(76, 44);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-            renderer.shadowMap.enabled = false;
-            innerEl.appendChild(renderer.domElement);
+            var displayCanvas = document.createElement("canvas");
+            displayCanvas.className = "airship-shared-render-output";
+            displayCanvas.width = sharedRenderer.domElement.width;
+            displayCanvas.height = sharedRenderer.domElement.height;
+            innerEl.appendChild(displayCanvas);
+            var displayContext = displayCanvas.getContext("2d");
 
             var scene = new THREE.Scene();
             // 3/4 Isometric Aerial Perspective Camera
@@ -2572,7 +2592,9 @@ function initAirshipModule() {
                 themeIdx: themeIdx,
                 el: el,
                 innerEl: innerEl,
-                renderer: renderer,
+                renderer: sharedRenderer,
+                displayCanvas: displayCanvas,
+                displayContext: displayContext,
                 scene: scene,
                 camera: camera,
                 model: model,
@@ -2585,6 +2607,8 @@ function initAirshipModule() {
         if (globeMap.getLayer("airship-symbol")) {
             globeMap.setLayoutProperty("airship-symbol", "visibility", "none");
         }
+    } else if (globeMap.getLayer("airship-symbol")) {
+        globeMap.setLayoutProperty("airship-symbol", "visibility", airshipVisible ? "visible" : "none");
     }
 
     function stepFlight(timestamp) {
@@ -2660,6 +2684,8 @@ function initAirshipModule() {
                     }
 
                     inst.renderer.render(inst.scene, inst.camera);
+                    inst.displayContext.clearRect(0, 0, inst.displayCanvas.width, inst.displayCanvas.height);
+                    inst.displayContext.drawImage(inst.renderer.domElement, 0, 0, inst.displayCanvas.width, inst.displayCanvas.height);
                 }
             });
 
@@ -5141,6 +5167,7 @@ window.earthquakeApp.test = {
     soundSteamWhistle: soundSteamWhistle,
     AIRSHIP_WHISTLE_PROFILES: AIRSHIP_WHISTLE_PROFILES,
     getAirshipVesselForLatitude: getAirshipVesselForLatitude,
+    shouldUseLive3DAirshipMarkers: shouldUseLive3DAirshipMarkers,
     triggerAirshipDetectionPing: triggerAirshipDetectionPing,
     checkRegionalEarthquakePings: checkRegionalEarthquakePings,
     isCoordVisibleOnGlobe: isCoordVisibleOnGlobe,
