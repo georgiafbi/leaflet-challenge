@@ -2351,32 +2351,63 @@ function initAirshipModule() {
             el.setAttribute("role", "button");
             el.setAttribute("aria-label", vessel.name + " 3D Airship Expedition");
 
-            var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            renderer.setSize(120, 70);
+            var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(140, 90);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
             renderer.shadowMap.enabled = false;
             el.appendChild(renderer.domElement);
 
             var scene = new THREE.Scene();
-            var camera = new THREE.PerspectiveCamera(40, 120 / 70, 0.1, 100);
-            camera.position.set(0, 1.2, 10.5);
+            // 3/4 Isometric Aerial Perspective Camera: elevated so the top hull, deck, both nacelles, and fins are fully volumetric!
+            var camera = new THREE.PerspectiveCamera(38, 140 / 90, 0.1, 100);
+            camera.position.set(2.8, 5.2, 12.2);
+            camera.lookAt(0, -0.3, 0);
 
-            // Lighting
-            var amb = new THREE.AmbientLight(0xfff7ed, 1.35);
+            // Rich 3-Point Studio Lighting for dramatic volumetric specular curves
+            var amb = new THREE.AmbientLight(0xffedd5, 1.1);
             scene.add(amb);
 
-            var sun = new THREE.DirectionalLight(0xffeedd, 2.2);
-            sun.position.set(15, 25, 20);
-            scene.add(sun);
+            var keySun = new THREE.DirectionalLight(0xfffbeb, 2.8);
+            keySun.position.set(16, 28, 20);
+            scene.add(keySun);
 
-            var fill = new THREE.DirectionalLight(vIdx === 1 ? 0x38bdf8 : (vIdx === 2 ? 0xfb7185 : 0xf59e0b), 0.85);
-            fill.position.set(-15, -8, -10);
-            scene.add(fill);
+            var fillAtmosphere = new THREE.DirectionalLight(0x0ea5e9, 1.2);
+            fillAtmosphere.position.set(-16, -10, -12);
+            scene.add(fillAtmosphere);
+
+            var rimBacklight = new THREE.DirectionalLight(0xfde047, 1.6);
+            rimBacklight.position.set(-20, 18, -15);
+            scene.add(rimBacklight);
 
             var model = build3DAirshipMesh(THREE, vIdx);
             if (model) {
                 scene.add(model.group);
             }
+
+            // Create Soft Radial 3D Ground Shadow Texture
+            var shadowCanvas = document.createElement("canvas");
+            shadowCanvas.width = 128;
+            shadowCanvas.height = 64;
+            var sCtx = shadowCanvas.getContext("2d");
+            var sGrad = sCtx.createRadialGradient(64, 32, 2, 64, 32, 60);
+            sGrad.addColorStop(0, "rgba(2, 6, 23, 0.8)");
+            sGrad.addColorStop(0.4, "rgba(2, 6, 23, 0.35)");
+            sGrad.addColorStop(1, "rgba(2, 6, 23, 0)");
+            sCtx.fillStyle = sGrad;
+            sCtx.fillRect(0, 0, 128, 64);
+            var shadowTex = new THREE.CanvasTexture(shadowCanvas);
+
+            var shadowGeo = new THREE.PlaneGeometry(9.0, 4.2);
+            var shadowMat = new THREE.MeshBasicMaterial({
+                map: shadowTex,
+                transparent: true,
+                opacity: 0.55,
+                depthWrite: false
+            });
+            var shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+            shadowMesh.rotation.x = -Math.PI / 2;
+            shadowMesh.position.set(0.2, -3.8, 0);
+            scene.add(shadowMesh);
 
             var marker = new maplibregl.Marker({ element: el, anchor: "center" })
                 .setLngLat([0, 0])
@@ -2394,6 +2425,7 @@ function initAirshipModule() {
                 scene: scene,
                 camera: camera,
                 model: model,
+                shadowMesh: shadowMesh,
                 marker: marker
             });
         });
@@ -2423,23 +2455,33 @@ function initAirshipModule() {
                 inst.el.style.display = "block";
 
                 if (inst.model) {
-                    // Propeller rotation
-                    inst.model.props.forEach(function (p) { p.rotation.x += dt * 45; });
+                    // High-speed 3D Propeller Rotation
+                    inst.model.props.forEach(function (p) { p.rotation.x += dt * 55; });
 
-                    // Steam exhaust particles
+                    // Billowing 3D Steam Exhaust
                     inst.model.exhaustParticles.forEach(function (ep, i) {
-                        ep.mesh.position.x = -1.0 - ((t * 2.5 + i * 0.5) % 2.5);
-                        var fade = 1.0 - (Math.abs(ep.mesh.position.x + 1.0) / 2.5);
-                        ep.mesh.scale.setScalar(0.8 + (1.0 - fade) * 1.5);
-                        ep.mesh.material.opacity = Math.max(0, fade * 0.45);
+                        ep.mesh.position.x = -1.0 - ((t * 2.8 + i * 0.45) % 2.6);
+                        var fade = 1.0 - (Math.abs(ep.mesh.position.x + 1.0) / 2.6);
+                        ep.mesh.scale.setScalar(0.8 + (1.0 - fade) * 1.8);
+                        ep.mesh.material.opacity = Math.max(0, fade * 0.5);
                     });
 
-                    // 3D orientation: align model with flight heading & camera angle
+                    // 3D Flight Orientation: dynamic yaw with realistic banking & pitch
                     var relBearing = ((pos.bearing - mapBearing + 540) % 360) - 180;
                     var rad = (relBearing * Math.PI) / 180;
-                    inst.model.group.rotation.y = -rad + Math.PI / 2;
-                    inst.model.group.rotation.z = Math.sin(t * 1.8 + inst.vIdx) * 0.08;
-                    inst.model.group.position.y = Math.sin(t * 1.4 + inst.vIdx) * 0.2;
+
+                    // Yaw angled into camera for 3D visibility
+                    inst.model.group.rotation.y = -rad + (Math.PI / 2) + Math.sin(t * 0.8) * 0.08;
+                    // Pitch & Banking into the curve
+                    inst.model.group.rotation.z = Math.sin(t * 1.6 + inst.vIdx) * 0.12 - 0.05;
+                    inst.model.group.rotation.x = Math.sin(t * 1.2 + inst.vIdx) * 0.08 + 0.1;
+                    inst.model.group.position.y = Math.sin(t * 1.5 + inst.vIdx) * 0.25;
+
+                    // Dynamic ground shadow response
+                    if (inst.shadowMesh) {
+                        inst.shadowMesh.scale.setScalar(1.0 - inst.model.group.position.y * 0.3);
+                        inst.shadowMesh.material.opacity = 0.42 - inst.model.group.position.y * 0.15;
+                    }
 
                     inst.renderer.render(inst.scene, inst.camera);
                 }
