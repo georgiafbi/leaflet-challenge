@@ -526,6 +526,25 @@
         assertEqual(button.getAttribute("aria-expanded"), "false", "button aria-expanded false");
     });
 
+    test("verifies Victorian airship orbital flight dynamics and waypoints", function () {
+        assert(Array.isArray(helpers.airshipWaypoints) && helpers.airshipWaypoints.length >= 15, "has full global waypoint route");
+        var pos0 = helpers.getAirshipPosition(0.0);
+        assert(Number.isFinite(pos0.lon), "pos0 valid lon");
+        assert(Number.isFinite(pos0.lat), "pos0 valid lat");
+        assert(Number.isFinite(pos0.bearing), "pos0 valid bearing");
+        assert(Number.isFinite(pos0.iconHeading), "pos0 valid iconHeading");
+        assert(pos0.altitude && pos0.altitude.includes("3,850"), "pos0 altitude");
+        assert(pos0.speed && pos0.speed.includes("48 knots"), "pos0 cruise speed");
+        assert(pos0.currentWaypoint, "pos0 currentWaypoint exists");
+        assert(pos0.note, "pos0 captain dispatch note exists");
+
+        var posMid = helpers.getAirshipPosition(0.5);
+        assert(Number.isFinite(posMid.lon) && Number.isFinite(posMid.lat), "posMid coordinates valid");
+
+        var imgData = helpers.createAirshipImage();
+        assert(imgData && imgData.width === 240 && imgData.height === 120, "airship canvas returns 240x120 high-DPI image");
+    });
+
     var failed = results.filter(function (result) { return !result.passed; });
     var list = document.getElementById("results");
     results.forEach(function (result) {

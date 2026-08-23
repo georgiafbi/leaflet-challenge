@@ -1819,6 +1819,601 @@ function createChampionEpicenterBadge(color) {
     return canvas;
 }
 
+// =========================================================================
+// --- HMS Aetheria · Victorian Retro-Fantasy Dirigible Orbital Module ---
+// =========================================================================
+
+var airshipVisible = true;
+var isFollowingAirship = false;
+var airshipAnimFrameId = null;
+var airshipLastTime = 0;
+var airshipProgress = 0.0;
+var airshipActivePopup = null;
+var airshipAudioCtx = null;
+
+var airshipWaypoints = [
+    { name: "Tokyo & Izu-Ogasawara Trench", lon: 139.75, lat: 35.68, note: "Barometric pressure steady at 30.1 inHg. Seismic sensors calibrated." },
+    { name: "Kuril-Kamchatka Subduction Arc", lon: 156.0, lat: 50.5, note: "Dense volcanic mist sighted over Kamchatka caldera vents." },
+    { name: "Aleutian Trench (Bering Sea)", lon: -175.0, lat: 52.5, note: "Riding strong westerly etheric trade winds across the northern arc." },
+    { name: "Cascadia Subduction Zone (Pacific NW)", lon: -123.3, lat: 48.5, note: "Logging megathrust harmonic vibrations along the Juan de Fuca plate." },
+    { name: "San Andreas Fault (California)", lon: -120.5, lat: 36.0, note: "Overflying the Great Rift; searchlights scanning fault scarps below." },
+    { name: "Middle America Trench (Oaxaca)", lon: -96.5, lat: 15.5, note: "Steam turbines humming at 48 knots in warm tropical crosswinds." },
+    { name: "Galapagos & Cocos Ridge", lon: -90.5, lat: 0.5, note: "Equatorial crossing; astrolabe and magnetic compass synchronised." },
+    { name: "Peru-Chile Trench (Nazca Subduction)", lon: -71.5, lat: -22.0, note: "Deep megathrust seismological survey in progress." },
+    { name: "Scotia Sea & Drake Passage", lon: -55.0, lat: -56.0, note: "Icebergs glistening under searchlight in the Southern Ocean." },
+    { name: "Mid-Atlantic Ridge (Equatorial Rift)", lon: -28.0, lat: -2.0, note: "Hydrothermal plume readings registered on the acoustic resonator." },
+    { name: "Azores Hotspot (North Atlantic)", lon: -26.0, lat: 38.5, note: "Fair winds and clear skies; afternoon tea served on the bridge." },
+    { name: "London (Royal Geographic Society)", lon: -0.1, lat: 51.5, note: "Transmitting telegraphic seismic dispatches to the Admiralty." },
+    { name: "Swiss Alps (Alpine Orogeny)", lon: 8.5, lat: 46.5, note: "Glacial massifs gleaming beneath our mahogany keel." },
+    { name: "Hellenic Arc (Santorini & Aegean)", lon: 23.5, lat: 36.0, note: "Volcanic fumaroles of Santorini illuminated off the starboard bow." },
+    { name: "Red Sea & East African Rift", lon: 38.0, lat: 20.0, note: "Continental spreading rift clearly demarcated across the desert." },
+    { name: "Himalayan Frontal Thrust (Everest)", lon: 87.0, lat: 28.0, note: "Cruising above the roof of the world; continental collision zone." },
+    { name: "Sunda Trench & Krakatoa", lon: 105.0, lat: -6.0, note: "Active volcanic acoustics picked up by our ventral phonograph." },
+    { name: "Mariana Trench (Challenger Deep)", lon: 142.5, lat: 11.5, note: "Scanning the deepest abyss on Earth; buoyancy locked at 3,850 m." },
+    { name: "Kermadec-Tonga Trench", lon: 177.0, lat: -30.0, note: "Pacific ring of fire active; deep-focus quake tremors logged." },
+    { name: "Hawaii Hotspot (Kilauea)", lon: -155.5, lat: 19.5, note: "Lava fountains of Kilauea illuminating the night clouds." }
+];
+
+function createAirshipImage() {
+    var width = 240;
+    var height = 120;
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext("2d");
+    var scale = 2;
+    ctx.scale(scale, scale);
+
+    var cx = 60;
+    var cy = 30;
+
+    // Searchlight beam glow forward-downward
+    var beamGrad = ctx.createRadialGradient(cx + 42, cy + 8, 2, cx + 55, cy + 18, 25);
+    beamGrad.addColorStop(0, "rgba(254, 240, 138, 0.45)");
+    beamGrad.addColorStop(0.4, "rgba(250, 204, 21, 0.15)");
+    beamGrad.addColorStop(1, "rgba(250, 204, 21, 0)");
+    ctx.beginPath();
+    ctx.moveTo(cx + 36, cy + 7);
+    ctx.lineTo(cx + 58, cy + 16);
+    ctx.lineTo(cx + 50, cy + 24);
+    ctx.closePath();
+    ctx.fillStyle = beamGrad;
+    ctx.fill();
+
+    // 1. Gas Envelope Outer Glow / Atmospheric Shimmer
+    var haloGrad = ctx.createRadialGradient(cx, cy - 2, 10, cx, cy - 2, 42);
+    haloGrad.addColorStop(0, "rgba(251, 191, 36, 0.25)");
+    haloGrad.addColorStop(0.7, "rgba(245, 158, 11, 0.08)");
+    haloGrad.addColorStop(1, "rgba(245, 158, 11, 0)");
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 3, 44, 22, 0, 0, Math.PI * 2);
+    ctx.fillStyle = haloGrad;
+    ctx.fill();
+
+    // 2. Tail Fins (Victorian Cross empennage)
+    // Top fin
+    ctx.beginPath();
+    ctx.moveTo(cx - 32, cy - 6);
+    ctx.lineTo(cx - 48, cy - 18);
+    ctx.lineTo(cx - 39, cy - 18);
+    ctx.lineTo(cx - 24, cy - 8);
+    ctx.closePath();
+    ctx.fillStyle = "#b45309";
+    ctx.fill();
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Bottom fin
+    ctx.beginPath();
+    ctx.moveTo(cx - 32, cy);
+    ctx.lineTo(cx - 48, cy + 12);
+    ctx.lineTo(cx - 39, cy + 12);
+    ctx.lineTo(cx - 24, cy + 2);
+    ctx.closePath();
+    ctx.fillStyle = "#78350f";
+    ctx.fill();
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Stabilizer Wing
+    ctx.beginPath();
+    ctx.moveTo(cx - 22, cy - 3);
+    ctx.lineTo(cx - 44, cy - 4);
+    ctx.lineTo(cx - 42, cy - 1);
+    ctx.lineTo(cx - 20, cy - 1);
+    ctx.closePath();
+    ctx.fillStyle = "#d97706";
+    ctx.fill();
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Stern Navigation Lights (Ruby & Emerald)
+    ctx.beginPath();
+    ctx.arc(cx - 48, cy - 18, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx - 48, cy + 12, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#10b981";
+    ctx.fill();
+
+    // 3. Main Rigid Hull / Gas Envelope (Dirigible Body)
+    var hullGrad = ctx.createLinearGradient(cx - 40, cy - 18, cx + 40, cy + 12);
+    hullGrad.addColorStop(0, "#78350f"); // Bronze stern
+    hullGrad.addColorStop(0.2, "#b45309"); // Warm amber
+    hullGrad.addColorStop(0.45, "#fde68a"); // Golden highlight
+    hullGrad.addColorStop(0.7, "#d97706"); // Burnished brass
+    hullGrad.addColorStop(0.9, "#92400e"); // Nose cone
+    hullGrad.addColorStop(1, "#f59e0b");
+
+    ctx.beginPath();
+    ctx.moveTo(cx + 38, cy - 3);
+    ctx.bezierCurveTo(cx + 35, cy - 16, cx + 10, cy - 17, cx - 12, cy - 15);
+    ctx.bezierCurveTo(cx - 28, cy - 14, cx - 38, cy - 8, cx - 42, cy - 3);
+    ctx.bezierCurveTo(cx - 38, cy + 2, cx - 28, cy + 8, cx - 12, cy + 9);
+    ctx.bezierCurveTo(cx + 10, cy + 11, cx + 35, cy + 10, cx + 38, cy - 3);
+    ctx.closePath();
+    ctx.fillStyle = hullGrad;
+    ctx.fill();
+
+    ctx.strokeStyle = "#451a03";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 4. Longitudinal Ribs & Ring Girders
+    ctx.strokeStyle = "rgba(120, 53, 15, 0.4)";
+    ctx.lineWidth = 0.9;
+    [-9, -4, 1, 6].forEach(function (offsetY) {
+        ctx.beginPath();
+        ctx.moveTo(cx - 40, cy - 3);
+        ctx.bezierCurveTo(cx - 20, cy + offsetY * 1.2, cx + 15, cy + offsetY * 1.2, cx + 37, cy - 3);
+        ctx.stroke();
+    });
+
+    ctx.strokeStyle = "rgba(254, 240, 138, 0.6)";
+    ctx.lineWidth = 0.8;
+    [-28, -16, -4, 8, 20, 29].forEach(function (posX) {
+        ctx.beginPath();
+        var factor = Math.cos((posX / 38) * (Math.PI / 2.2));
+        var rh = 13 * Math.max(0.3, factor);
+        ctx.ellipse(cx + posX, cy - 3, 2.5, rh, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    });
+
+    // Specular Top Highlight
+    var specGrad = ctx.createLinearGradient(cx - 30, cy - 14, cx + 30, cy - 14);
+    specGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    specGrad.addColorStop(0.4, "rgba(255, 255, 255, 0.75)");
+    specGrad.addColorStop(0.7, "rgba(255, 255, 255, 0.65)");
+    specGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, cy - 12);
+    ctx.bezierCurveTo(cx - 10, cy - 15, cx + 15, cy - 15, cx + 30, cy - 7);
+    ctx.strokeStyle = specGrad;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // 5. Underslung Keel & Observation Gondola
+    ctx.strokeStyle = "#451a03";
+    ctx.lineWidth = 0.8;
+    [-18, -8, 2, 12, 22].forEach(function (sx) {
+        ctx.beginPath();
+        ctx.moveTo(cx + sx, cy + 7);
+        ctx.lineTo(cx + sx * 0.9, cy + 12);
+        ctx.stroke();
+    });
+
+    var gondolaGrad = ctx.createLinearGradient(cx - 16, cy + 12, cx + 22, cy + 18);
+    gondolaGrad.addColorStop(0, "#451a03");
+    gondolaGrad.addColorStop(0.5, "#78350f");
+    gondolaGrad.addColorStop(1, "#b45309");
+
+    ctx.beginPath();
+    if (ctx.roundRect) {
+        ctx.roundRect(cx - 16, cy + 12, 38, 7, [2, 5, 2, 2]);
+    } else {
+        ctx.rect(cx - 16, cy + 12, 38, 7);
+    }
+    ctx.fillStyle = gondolaGrad;
+    ctx.fill();
+    ctx.strokeStyle = "#fef08a";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Portholes
+    [-12, -6, 0, 6, 12, 17].forEach(function (wx) {
+        ctx.beginPath();
+        ctx.rect(cx + wx, cy + 13.5, 3.5, 3.5);
+        ctx.fillStyle = "#fef08a";
+        ctx.fill();
+        ctx.strokeStyle = "#78350f";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+    });
+
+    // Forward Searchlight Housing
+    ctx.beginPath();
+    ctx.arc(cx + 22, cy + 15.5, 2.5, -Math.PI / 2, Math.PI / 2);
+    ctx.fillStyle = "#facc15";
+    ctx.fill();
+    ctx.strokeStyle = "#78350f";
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+
+    // 6. Outrigger Engines & Twin Propellers
+    ctx.beginPath();
+    ctx.ellipse(cx - 4, cy + 6, 6, 2.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#292524";
+    ctx.fill();
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(cx - 10, cy + 6, 1.2, 5.5, 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(254, 240, 138, 0.75)";
+    ctx.fill();
+
+    // Exhaust Pipe & Steam
+    ctx.beginPath();
+    ctx.rect(cx - 2, cy + 2.5, 1.8, 2.5);
+    ctx.fillStyle = "#78716c";
+    ctx.fill();
+
+    var steamGrad = ctx.createRadialGradient(cx - 6, cy + 2, 0.5, cx - 12, cy + 1, 5);
+    steamGrad.addColorStop(0, "rgba(255, 255, 255, 0.6)");
+    steamGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.25)");
+    steamGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.beginPath();
+    ctx.arc(cx - 7, cy + 2, 2.5, 0, Math.PI * 2);
+    ctx.arc(cx - 11, cy + 1, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = steamGrad;
+    ctx.fill();
+
+    return ctx.getImageData(0, 0, width, height);
+}
+
+function buildAirshipOrbitGeoJSON() {
+    var features = [];
+    var N = airshipWaypoints.length;
+    var steps = 180;
+    var coords = [];
+
+    for (var s = 0; s <= steps; s++) {
+        var u = (s / steps) % 1.0;
+        var pos = getAirshipPosition(u);
+        coords.push([pos.lon, pos.lat]);
+    }
+
+    // Segment across antimeridian if needed
+    var segments = [[]];
+    for (var i = 0; i < coords.length; i++) {
+        var pt = coords[i];
+        var currSeg = segments[segments.length - 1];
+        if (currSeg.length > 0) {
+            var prevPt = currSeg[currSeg.length - 1];
+            if (Math.abs(pt[0] - prevPt[0]) > 180) {
+                segments.push([pt]);
+                continue;
+            }
+        }
+        currSeg.push(pt);
+    }
+
+    segments.forEach(function (seg, idx) {
+        if (seg.length > 1) {
+            features.push({
+                type: "Feature",
+                properties: { id: "orbit-seg-" + idx },
+                geometry: { type: "LineString", coordinates: seg }
+            });
+        }
+    });
+
+    return { type: "FeatureCollection", features: features };
+}
+
+function getAirshipPosition(progress) {
+    var N = airshipWaypoints.length;
+    var normProgress = ((progress % 1.0) + 1.0) % 1.0;
+    var floatIdx = normProgress * N;
+    var idx = Math.floor(floatIdx);
+    var t = floatIdx - idx;
+
+    var wpA = airshipWaypoints[idx % N];
+    var wpB = airshipWaypoints[(idx + 1) % N];
+
+    var deltaLon = ((wpB.lon - wpA.lon + 540) % 360) - 180;
+    var lon = ((wpA.lon + t * deltaLon + 180) % 360) - 180;
+    var lat = wpA.lat + t * (wpB.lat - wpA.lat) + Math.sin(t * Math.PI) * 1.5;
+
+    // Smooth heading calculation
+    var radLat = (wpA.lat * Math.PI) / 180;
+    var dy = ((wpB.lat - wpA.lat) * Math.PI) / 180;
+    var dx = (deltaLon * Math.PI) / 180 * Math.cos(radLat);
+    var bearing = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+
+    // Icon points East (90 deg) in canvas, so iconHeading = (bearing - 90 + 360) % 360
+    var iconHeading = (bearing - 90 + 360) % 360;
+
+    var headingCompass = formatCompassHeading(bearing);
+
+    return {
+        lon: Number(lon.toFixed(4)),
+        lat: Number(lat.toFixed(4)),
+        bearing: Number(bearing.toFixed(1)),
+        iconHeading: Number(iconHeading.toFixed(1)),
+        headingCompass: headingCompass,
+        currentWaypoint: wpA.name,
+        nextWaypoint: wpB.name,
+        note: wpA.note,
+        altitude: "3,850 m (Ether-buoyant)",
+        speed: "48 knots (Twin Turbines)"
+    };
+}
+
+function formatCompassHeading(deg) {
+    var points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    var idx = Math.round(deg / 22.5) % 16;
+    return String(Math.round(deg)).padStart(3, "0") + "° " + points[idx];
+}
+
+function getAirshipGeoJSON(state) {
+    return {
+        type: "FeatureCollection",
+        features: [
+            {
+                type: "Feature",
+                geometry: {
+                    type: "Point",
+                    coordinates: [state.lon, state.lat]
+                },
+                properties: {
+                    name: "HMS Aetheria",
+                    registry: "No. 1894-A",
+                    class: "Royal Seismological Survey Dirigible",
+                    altitude: state.altitude,
+                    speed: state.speed,
+                    heading: state.headingCompass,
+                    iconHeading: state.iconHeading,
+                    currentWaypoint: state.currentWaypoint,
+                    nextWaypoint: state.nextWaypoint,
+                    note: state.note,
+                    lon: state.lon,
+                    lat: state.lat
+                }
+            }
+        ]
+    };
+}
+
+function initAirshipModule() {
+    if (!globeMap || !globeMap.getSource("airship")) return;
+
+    function stepFlight(timestamp) {
+        if (!airshipLastTime) airshipLastTime = timestamp;
+        var elapsed = timestamp - airshipLastTime;
+        airshipLastTime = timestamp;
+
+        // Cruise speed: 1 full global circuit in 180 seconds (3 minutes)
+        if (airshipVisible) {
+            airshipProgress = (airshipProgress + (elapsed / 180000)) % 1.0;
+            var pos = getAirshipPosition(airshipProgress);
+            var src = globeMap.getSource("airship");
+            if (src) {
+                src.setData(getAirshipGeoJSON(pos));
+            }
+
+            // Update topbar airship badge if present
+            var badge = document.getElementById("airship-status-pill");
+            if (badge) {
+                badge.textContent = "🛸 HMS Aetheria · " + pos.currentWaypoint.split(" & ")[0];
+            }
+
+            // Update camera if follow mode is active
+            if (isFollowingAirship && globeMap) {
+                globeMap.easeTo({
+                    center: [pos.lon, pos.lat],
+                    duration: 100,
+                    easing: function (x) { return x; }
+                });
+            }
+        }
+
+        airshipAnimFrameId = requestAnimationFrame(stepFlight);
+    }
+
+    if (airshipAnimFrameId) cancelAnimationFrame(airshipAnimFrameId);
+    airshipAnimFrameId = requestAnimationFrame(stepFlight);
+}
+
+function setAirshipVisibility(visible) {
+    airshipVisible = Boolean(visible);
+    if (!globeMap) return;
+    var visStr = airshipVisible ? "visible" : "none";
+    ["airship-orbit-path", "airship-searchlight", "airship-symbol"].forEach(function (layerId) {
+        if (globeMap.getLayer(layerId)) {
+            globeMap.setLayoutProperty(layerId, "visibility", visStr);
+        }
+    });
+    if (!airshipVisible && isFollowingAirship) {
+        toggleFollowAirship(false);
+    }
+}
+
+function toggleFollowAirship(forcedState) {
+    if (typeof forcedState === "boolean") {
+        isFollowingAirship = forcedState;
+    } else {
+        isFollowingAirship = !isFollowingAirship;
+    }
+    var followBtn = document.getElementById("airship-follow-btn");
+    if (followBtn) {
+        followBtn.classList.toggle("is-active", isFollowingAirship);
+        followBtn.textContent = isFollowingAirship ? "🔭 Lock Camera (Active)" : "🔭 Follow Airship";
+    }
+    if (isFollowingAirship) {
+        var pos = getAirshipPosition(airshipProgress);
+        if (globeMap) {
+            globeMap.flyTo({ center: [pos.lon, pos.lat], zoom: 4.5, speed: 1.2 });
+        }
+    }
+}
+
+function soundSteamWhistle() {
+    try {
+        if (!airshipAudioCtx) {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) airshipAudioCtx = new AudioContext();
+        }
+        if (airshipAudioCtx && airshipAudioCtx.state === "suspended") {
+            airshipAudioCtx.resume();
+        }
+        if (!airshipAudioCtx) return;
+
+        var now = airshipAudioCtx.currentTime;
+        // Harmonic whistle chords: D5 (587 Hz), F#5 (740 Hz), A5 (880 Hz)
+        var freqs = [587.3, 739.9, 880.0];
+        var masterGain = airshipAudioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.exponentialRampToValueAtTime(0.18, now + 0.15);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+        masterGain.connect(airshipAudioCtx.destination);
+
+        freqs.forEach(function (f) {
+            var osc = airshipAudioCtx.createOscillator();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.linearRampToValueAtTime(f * 1.02, now + 0.5);
+            var oscGain = airshipAudioCtx.createGain();
+            oscGain.gain.value = 0.33;
+            osc.connect(oscGain);
+            oscGain.connect(masterGain);
+            osc.start(now);
+            osc.stop(now + 1.25);
+        });
+
+        // Trigger visual steam puff animation on popup
+        var puffEl = document.getElementById("airship-whistle-puff");
+        if (puffEl) {
+            puffEl.classList.remove("puff-active");
+            void puffEl.offsetWidth; // Reflow
+            puffEl.classList.add("puff-active");
+        }
+    } catch (e) {
+        console.log("Audio whistle playback omitted:", e);
+    }
+}
+
+function showAirshipPopup(lngLat) {
+    if (!globeMap) return;
+    var pos = getAirshipPosition(airshipProgress);
+
+    var popupContent = document.createElement("div");
+    popupContent.className = "quake-popup airship-popup";
+
+    var header = document.createElement("div");
+    header.className = "airship-popup-header";
+    header.innerHTML = `
+        <div class="airship-title-wrap">
+            <span class="airship-insignia">⚙️</span>
+            <div>
+                <h3>HMS Aetheria</h3>
+                <p class="airship-subtitle">Royal Aerial Seismological Expedition · No. 1894-A</p>
+            </div>
+        </div>
+        <div id="airship-whistle-puff" class="airship-steam-puff" title="Steam Vent">💨</div>
+    `;
+    popupContent.appendChild(header);
+
+    var grid = document.createElement("div");
+    grid.className = "airship-gauge-grid";
+    grid.innerHTML = `
+        <div class="airship-gauge">
+            <span class="gauge-label">Altitude</span>
+            <strong class="gauge-val">3,850 m</strong>
+            <span class="gauge-sub">Ether-buoyant</span>
+        </div>
+        <div class="airship-gauge">
+            <span class="gauge-label">Airspeed</span>
+            <strong class="gauge-val">48 kts</strong>
+            <span class="gauge-sub">Twin Turbines</span>
+        </div>
+        <div class="airship-gauge">
+            <span class="gauge-label">Heading</span>
+            <strong class="gauge-val">${pos.headingCompass}</strong>
+            <span class="gauge-sub">Astrolabe</span>
+        </div>
+        <div class="airship-gauge">
+            <span class="gauge-label">Coordinates</span>
+            <strong class="gauge-val">${pos.lat > 0 ? pos.lat + "°N" : Math.abs(pos.lat) + "°S"}, ${pos.lon > 0 ? pos.lon + "°E" : Math.abs(pos.lon) + "°W"}</strong>
+            <span class="gauge-sub">Sextant Fix</span>
+        </div>
+    `;
+    popupContent.appendChild(grid);
+
+    var dispatch = document.createElement("div");
+    dispatch.className = "airship-dispatch-card";
+    dispatch.innerHTML = `
+        <p class="dispatch-title"><strong>Current Overflight:</strong> ${pos.currentWaypoint}</p>
+        <p class="dispatch-note">“${pos.note}”</p>
+    `;
+    popupContent.appendChild(dispatch);
+
+    var actions = document.createElement("div");
+    actions.className = "airship-actions";
+
+    var followBtn = document.createElement("button");
+    followBtn.id = "airship-follow-btn";
+    followBtn.type = "button";
+    followBtn.className = "airship-btn airship-btn-follow" + (isFollowingAirship ? " is-active" : "");
+    followBtn.textContent = isFollowingAirship ? "🔭 Lock Camera (Active)" : "🔭 Follow Airship";
+    followBtn.addEventListener("click", function () {
+        toggleFollowAirship();
+    });
+    actions.appendChild(followBtn);
+
+    var whistleBtn = document.createElement("button");
+    whistleBtn.type = "button";
+    whistleBtn.className = "airship-btn airship-btn-whistle";
+    whistleBtn.textContent = "💨 Steam Whistle";
+    whistleBtn.addEventListener("click", soundSteamWhistle);
+    actions.appendChild(whistleBtn);
+
+    popupContent.appendChild(actions);
+
+    if (airshipActivePopup) {
+        airshipActivePopup.remove();
+    }
+
+    airshipActivePopup = new maplibregl.Popup({ maxWidth: "340px", offset: 12, className: "airship-maplibre-popup" })
+        .setLngLat(lngLat || [pos.lon, pos.lat])
+        .setDOMContent(popupContent)
+        .addTo(globeMap);
+
+    airshipActivePopup.on("close", function () {
+        airshipActivePopup = null;
+    });
+}
+
+function flyToAirship() {
+    if (!globeMap) return;
+    setAirshipVisibility(true);
+    var airshipInput = document.getElementById("airship-visibility");
+    if (airshipInput) airshipInput.checked = true;
+    var pos = getAirshipPosition(airshipProgress);
+    globeMap.flyTo({
+        center: [pos.lon, pos.lat],
+        zoom: 4.8,
+        speed: 1.4,
+        essential: true
+    });
+    showAirshipPopup([pos.lon, pos.lat]);
+}
+
 function applyDepthFilters() {
     if (!globeMap || !globeMap.getLayer("quake-spheres")) {
         return;
@@ -2213,6 +2808,26 @@ function buildMapPanels() {
     platesToggle.appendChild(platesInput);
     platesToggle.appendChild(platesText);
     baseContent.appendChild(platesToggle);
+
+    var airshipToggle = document.createElement("label");
+    airshipToggle.className = "base-option";
+    var airshipInput = document.createElement("input");
+    airshipInput.type = "checkbox";
+    airshipInput.id = "airship-visibility";
+    airshipInput.checked = airshipVisible;
+    airshipInput.addEventListener("change", function (event) {
+        setAirshipVisibility(event.target.checked);
+        if (compactViewportQuery.matches) {
+            setMapPanelExpanded(basePanel, baseHeader, baseContent, false);
+            baseHeader.focus();
+        }
+    });
+    var airshipText = document.createElement("span");
+    airshipText.textContent = "Aerial Survey (Airship)";
+    airshipToggle.appendChild(airshipInput);
+    airshipToggle.appendChild(airshipText);
+    baseContent.appendChild(airshipToggle);
+
     basePanel.appendChild(baseContent);
 
     baseHeader.addEventListener("click", function () {
@@ -2764,6 +3379,98 @@ function createMap() {
             });
         });
 
+        globeMap.addImage("victorian-airship", createAirshipImage(), { pixelRatio: 2 });
+
+        // Add Airship Orbit Path GeoJSON Source & Layer
+        globeMap.addSource("airship-orbit", {
+            type: "geojson",
+            data: buildAirshipOrbitGeoJSON()
+        });
+
+        globeMap.addLayer({
+            id: "airship-orbit-path",
+            type: "line",
+            source: "airship-orbit",
+            layout: {
+                "line-cap": "round",
+                "line-join": "round",
+                "visibility": airshipVisible ? "visible" : "none"
+            },
+            paint: {
+                "line-color": "#fbbf24",
+                "line-width": 1.75,
+                "line-opacity": 0.4,
+                "line-dasharray": [4, 4],
+                "line-blur": 0.8
+            }
+        });
+
+        // Add Airship Dynamic GeoJSON Source
+        globeMap.addSource("airship", {
+            type: "geojson",
+            data: getAirshipGeoJSON(getAirshipPosition(airshipProgress))
+        });
+
+        // Searchlight scan footprint on ground
+        globeMap.addLayer({
+            id: "airship-searchlight",
+            type: "circle",
+            source: "airship",
+            layout: {
+                "visibility": airshipVisible ? "visible" : "none"
+            },
+            paint: {
+                "circle-radius": [
+                    "interpolate", ["linear"], ["zoom"],
+                    1, 14,
+                    5, 28,
+                    9, 48
+                ],
+                "circle-color": "rgba(254, 240, 138, 0.22)",
+                "circle-blur": 0.5,
+                "circle-stroke-width": 1.5,
+                "circle-stroke-color": "rgba(250, 204, 21, 0.65)"
+            }
+        });
+
+        // Victorian Airship Symbol Layer
+        globeMap.addLayer({
+            id: "airship-symbol",
+            type: "symbol",
+            source: "airship",
+            layout: {
+                "icon-image": "victorian-airship",
+                "icon-size": [
+                    "interpolate", ["linear"], ["zoom"],
+                    1, 0.62,
+                    3, 0.76,
+                    6, 1.05,
+                    9, 1.35
+                ],
+                "icon-rotate": ["get", "iconHeading"],
+                "icon-rotation-alignment": "map",
+                "icon-pitch-alignment": "map",
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+                "visibility": airshipVisible ? "visible" : "none"
+            }
+        });
+
+        globeMap.on("click", "airship-symbol", function (event) {
+            var feature = event.features && event.features[0];
+            if (!feature) return;
+            showAirshipPopup(event.lngLat);
+        });
+
+        globeMap.on("mouseenter", "airship-symbol", function () {
+            globeMap.getCanvas().style.cursor = "pointer";
+        });
+        globeMap.on("mouseleave", "airship-symbol", function () {
+            globeMap.getCanvas().style.cursor = "";
+        });
+
+        initAirshipModule();
+
         applyDepthFilters();
         mapLoaded = true;
         syncChampionPingMotion();
@@ -2775,6 +3482,9 @@ function createMap() {
         ["mousedown", "touchstart", "wheel", "dblclick"].forEach(function (eventName) {
             globeMap.on(eventName, function () {
                 setAutoRotate(false);
+                if (isFollowingAirship) {
+                    toggleFollowAirship(false);
+                }
             });
         });
         var loadedAttribution = globeMap.getContainer().querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show");
@@ -2997,6 +3707,13 @@ window.earthquakeApp.test = {
     matchesMagnitudeFilter: matchesMagnitudeFilter,
     getFilteredFeatures: getFilteredFeatures,
     setTectonicPlatesVisibility: setTectonicPlatesVisibility,
+    createAirshipImage: createAirshipImage,
+    getAirshipPosition: getAirshipPosition,
+    setAirshipVisibility: setAirshipVisibility,
+    toggleFollowAirship: toggleFollowAirship,
+    flyToAirship: flyToAirship,
+    soundSteamWhistle: soundSteamWhistle,
+    airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,
     startTimelapse: startTimelapse,
@@ -3035,6 +3752,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
     updateRangeControls(currentRange);
+
+    // Airship fly-to button
+    var flyAirshipBtn = document.getElementById("fly-to-airship");
+    if (flyAirshipBtn) {
+        flyAirshipBtn.addEventListener("click", function () {
+            flyToAirship();
+        });
+    }
 
     // Search bar event wiring
     var searchInput = document.getElementById("quake-search");
