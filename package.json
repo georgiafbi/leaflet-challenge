@@ -1,0 +1,21 @@
+{
+  "name": "earthquake-monitor",
+  "version": "1.0.0",
+  "description": "Interactive MapLibre GL globe visualizing real-time seismic activity from the USGS Earthquake Catalog",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "dev": "node scripts/serve.js",
+    "test": "node scripts/run-tests.js"
+  },
+  "keywords": [
+    "maplibre",
+    "earthquake",
+    "usgs",
+    "geospatial",
+    "globe",
+    "threejs",
+    "webgl"
+  ],
+  "author": "",
+  "license": "MIT"
+}

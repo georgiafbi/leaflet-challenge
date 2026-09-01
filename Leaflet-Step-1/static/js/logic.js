@@ -480,6 +480,14 @@ function classifyGeography(lon, lat) {
     };
 }
 
+function hasTsunamiWarning(feature) {
+    if (!feature || !feature.properties) {
+        return false;
+    }
+    var val = feature.properties.tsunami;
+    return val === 1 || val === "1" || val === true;
+}
+
 function normalizeEarthquakeFeature(feature) {
     if (!feature || feature.type !== "Feature" || !feature.geometry || feature.geometry.type !== "Point" ||
             !Array.isArray(feature.geometry.coordinates) || !feature.properties ||
@@ -510,6 +518,7 @@ function normalizeEarthquakeFeature(feature) {
     properties.depthKey = getDepthRangeKey(depth);
     properties.shapeKey = getMagnitudeShapeKey(properties.mag);
     properties.magnitudeLabel = formatMagnitudeLabel(properties.mag);
+    properties.hasTsunami = hasTsunamiWarning(feature);
 
     var location = resolveLocationTokens(properties.place, properties.country, properties.countryCode, lon, lat);
     properties.state = location.state;
@@ -5143,6 +5152,7 @@ window.earthquakeApp.test = {
     getZoomEasterEgg: getZoomEasterEgg,
     handleReducedMotionChange: handleReducedMotionChange,
     hasVisiblePingCandidates: hasVisiblePingCandidates,
+    hasTsunamiWarning: hasTsunamiWarning,
     markRegionalChampions: markRegionalChampions,
     normalizeEarthquakeFeature: normalizeEarthquakeFeature,
     setActiveQuakePopup: setActiveQuakePopup,

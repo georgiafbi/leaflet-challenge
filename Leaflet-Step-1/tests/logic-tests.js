@@ -180,6 +180,34 @@
         assertEqual(helpers.normalizeEarthquakeFeature({ type: "NotAFeature", geometry: { type: "Point", coordinates: [0, 0, 10] }, properties: { time: 1 } }), null, "invalid GeoJSON type");
     });
 
+    test("detects and normalizes tsunami warning status", function () {
+        assertEqual(helpers.hasTsunamiWarning({ properties: { tsunami: 1 } }), true, "tsunami value 1 should indicate active warning");
+        assertEqual(helpers.hasTsunamiWarning({ properties: { tsunami: "1" } }), true, "tsunami string '1' should indicate active warning");
+        assertEqual(helpers.hasTsunamiWarning({ properties: { tsunami: true } }), true, "tsunami boolean true should indicate active warning");
+        assertEqual(helpers.hasTsunamiWarning({ properties: { tsunami: 0 } }), false, "tsunami value 0 should indicate no warning");
+        assertEqual(helpers.hasTsunamiWarning({ properties: { tsunami: null } }), false, "tsunami null should indicate no warning");
+        assertEqual(helpers.hasTsunamiWarning({ properties: {} }), false, "missing tsunami property should indicate no warning");
+        assertEqual(helpers.hasTsunamiWarning(null), false, "null feature should indicate no warning");
+
+        var normalizedWithTsunami = helpers.normalizeEarthquakeFeature({
+            id: "tsunami-event",
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [142.5, 38.3, 20.0] },
+            properties: { mag: 8.9, time: 1767225600000, place: "Near east coast of Honshu, Japan", tsunami: 1 }
+        });
+        assert(normalizedWithTsunami, "feature with tsunami should normalize successfully");
+        assertEqual(normalizedWithTsunami.properties.hasTsunami, true, "normalized feature hasTsunami flag should be true");
+
+        var normalizedWithoutTsunami = helpers.normalizeEarthquakeFeature({
+            id: "regular-event",
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [-122.4, 37.8, 8.5] },
+            properties: { mag: 3.2, time: 1767225600000, place: "San Francisco Bay area, California", tsunami: 0 }
+        });
+        assert(normalizedWithoutTsunami, "regular feature should normalize successfully");
+        assertEqual(normalizedWithoutTsunami.properties.hasTsunami, false, "normalized feature hasTsunami flag should be false");
+    });
+
     test("selects range presets and fallback", function () {
         assertEqual(helpers.getRangePresetByKey("7d").hours, 168, "7-day preset");
         assertEqual(helpers.getRangePresetByKey("30d").hours, 720, "30-day quick preset");
