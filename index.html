@@ -41,6 +41,21 @@
       </div>
     </header>
 
+    <!-- Tsunami Warning Alert Banner -->
+    <div id="tsunami-alert-banner" class="tsunami-alert-banner" hidden role="region" aria-label="Tsunami warning alerts">
+      <div class="tsunami-alert-content">
+        <span class="tsunami-alert-icon" aria-hidden="true">🌊</span>
+        <div class="tsunami-alert-text">
+          <strong id="tsunami-alert-title">TSUNAMI WARNING ACTIVE</strong>
+          <span id="tsunami-alert-desc">NOAA/USGS tsunami threat generated</span>
+        </div>
+      </div>
+      <div class="tsunami-alert-actions">
+        <button id="tsunami-filter-btn" class="tsunami-action-btn" type="button" aria-pressed="false">Show Tsunami Quakes</button>
+        <button id="tsunami-fly-btn" class="tsunami-action-btn tsunami-action-btn--primary" type="button">Fly to Epicenter</button>
+      </div>
+    </div>
+
     <section class="toolbar-panel" aria-label="Search and filter earthquakes">
       <div class="search-box">
         <span class="search-icon" aria-hidden="true">🔍</span>
@@ -51,6 +66,7 @@
       <div class="mag-filters" role="group" aria-label="Minimum magnitude filter">
         <span class="mag-filter-label">Min Mag</span>
         <button class="mag-filter-chip is-active" type="button" data-mag="0" aria-pressed="true">All</button>
+        <button id="tsunami-filter-chip" class="mag-filter-chip tsunami-chip" type="button" data-tsunami="true" aria-pressed="false">🌊 Tsunami</button>
         <button class="mag-filter-chip" type="button" data-mag="2.5" aria-pressed="false">2.5+</button>
         <button class="mag-filter-chip" type="button" data-mag="4.5" aria-pressed="false">4.5+</button>
         <button class="mag-filter-chip" type="button" data-mag="6.0" aria-pressed="false">6.0+</button>

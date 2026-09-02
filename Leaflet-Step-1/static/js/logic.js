@@ -69,6 +69,7 @@ let mapLoaded = false;
 let quakesVisible = true;
 let platesVisible = true;
 let minMagnitude = 0;
+let isTsunamiFilterActive = false;
 let searchQuery = "";
 let isTimelapsePlaying = false;
 let timelapseTimer = null;
@@ -785,6 +786,13 @@ function buildPopupContent(props) {
         content.appendChild(championBadge);
     }
 
+    if (props.hasTsunami === true || props.tsunami === 1 || props.tsunami === "1") {
+        var tsunamiBadge = document.createElement("p");
+        tsunamiBadge.className = "tsunami-popup-badge";
+        tsunamiBadge.textContent = "🌊 Tsunami Warning / Threat Issued";
+        content.appendChild(tsunamiBadge);
+    }
+
     appendPopupRow(content, "Magnitude", formatMagnitudeLabel(props.mag));
     appendPopupRow(content, "Depth", props.depth + " km");
     appendPopupRow(content, "Country/area", props.displayRegion || "Unknown");
@@ -1168,11 +1176,77 @@ function matchesMagnitudeFilter(magnitude, minMag) {
     return val !== null && val >= min;
 }
 
+function getTsunamiSummary(features) {
+    var list = Array.isArray(features) ? features : (currentGeojson.features || []);
+    var tsunamiQuakes = list.filter(function (q) {
+        return q && q.properties && (q.properties.hasTsunami === true || q.properties.tsunami === 1 || q.properties.tsunami === "1");
+    });
+    var strongestTsunami = tsunamiQuakes.reduce(function (best, quake) {
+        var mag = getNumericMagnitude(quake.properties.mag);
+        if (mag === null) return best;
+        return !best || mag > getNumericMagnitude(best.properties.mag) ? quake : best;
+    }, null);
+    return {
+        count: tsunamiQuakes.length,
+        strongestTsunami: strongestTsunami,
+        features: tsunamiQuakes
+    };
+}
+
+function updateTsunamiAlertBanner(summary) {
+    var banner = document.getElementById("tsunami-alert-banner");
+    if (!banner) return;
+    var data = summary || getTsunamiSummary(currentGeojson.features);
+    if (!data || data.count <= 0) {
+        banner.hidden = true;
+        banner.setAttribute("hidden", "");
+        return;
+    }
+    banner.removeAttribute("hidden");
+    banner.hidden = false;
+    var titleEl = document.getElementById("tsunami-alert-title");
+    var descEl = document.getElementById("tsunami-alert-desc");
+    var filterBtn = document.getElementById("tsunami-filter-btn");
+
+    if (titleEl) {
+        titleEl.textContent = data.count === 1 ? "TSUNAMI WARNING ACTIVE" : "TSUNAMI WARNINGS ACTIVE (" + data.count + ")";
+    }
+    if (descEl) {
+        var locText = data.strongestTsunami && data.strongestTsunami.properties && data.strongestTsunami.properties.place
+            ? " · Strongest: " + (data.strongestTsunami.properties.magnitudeLabel || formatMagnitudeLabel(data.strongestTsunami.properties.mag)) + " M " + data.strongestTsunami.properties.place
+            : "";
+        descEl.textContent = data.count + " event" + (data.count === 1 ? "" : "s") + " with NOAA/USGS tsunami threat generated" + locText;
+    }
+    if (filterBtn) {
+        filterBtn.classList.toggle("is-active", isTsunamiFilterActive);
+        filterBtn.setAttribute("aria-pressed", String(isTsunamiFilterActive));
+        filterBtn.textContent = isTsunamiFilterActive ? "Show All Quakes" : "Show Tsunami Quakes";
+    }
+}
+
+function toggleTsunamiFilter(active) {
+    isTsunamiFilterActive = active !== undefined ? Boolean(active) : !isTsunamiFilterActive;
+    var chip = document.getElementById("tsunami-filter-chip");
+    if (chip) {
+        chip.classList.toggle("is-active", isTsunamiFilterActive);
+        chip.setAttribute("aria-pressed", String(isTsunamiFilterActive));
+    }
+    var bannerBtn = document.getElementById("tsunami-filter-btn");
+    if (bannerBtn) {
+        bannerBtn.classList.toggle("is-active", isTsunamiFilterActive);
+        bannerBtn.setAttribute("aria-pressed", String(isTsunamiFilterActive));
+        bannerBtn.textContent = isTsunamiFilterActive ? "Show All Quakes" : "Show Tsunami Quakes";
+    }
+    refreshEarthquakeSource();
+    renderFeedDrawer();
+}
+
 function getFilteredFeatures(features, options) {
     var depthSet = options && options.activeDepthRanges ? options.activeDepthRanges : activeDepthRanges;
     var minMag = options && options.minMagnitude !== undefined ? options.minMagnitude : minMagnitude;
     var query = options && options.searchQuery !== undefined ? options.searchQuery : searchQuery;
     var timeMax = options && options.timelapseTimeMax !== undefined ? options.timelapseTimeMax : null;
+    var tsunamiOnly = options && options.tsunamiOnly !== undefined ? options.tsunamiOnly : isTsunamiFilterActive;
 
     var list = Array.isArray(features) ? features : (currentGeojson.features || []);
     return list.filter(function (feature) {
@@ -1180,6 +1254,9 @@ function getFilteredFeatures(features, options) {
             return false;
         }
         var props = feature.properties;
+        if (tsunamiOnly && !props.hasTsunami) {
+            return false;
+        }
         if (!depthSet.has(props.depthKey)) {
             return false;
         }
@@ -3842,7 +3919,20 @@ function resetMapFilters() {
     if (clearSearchBtn) {
         clearSearchBtn.hidden = true;
     }
+    isTsunamiFilterActive = false;
+    var tsunamiChip = document.getElementById("tsunami-filter-chip");
+    if (tsunamiChip) {
+        tsunamiChip.classList.remove("is-active");
+        tsunamiChip.setAttribute("aria-pressed", "false");
+    }
+    var tsunamiBtn = document.getElementById("tsunami-filter-btn");
+    if (tsunamiBtn) {
+        tsunamiBtn.classList.remove("is-active");
+        tsunamiBtn.setAttribute("aria-pressed", "false");
+        tsunamiBtn.textContent = "Show Tsunami Quakes";
+    }
     document.querySelectorAll(".mag-filter-chip").forEach(function (chip) {
+        if (chip.id === "tsunami-filter-chip") return;
         var isActive = chip.dataset.mag === "0";
         chip.classList.toggle("is-active", isActive);
         chip.setAttribute("aria-pressed", String(isActive));
@@ -3978,6 +4068,13 @@ function renderFeedDrawer() {
         var place = document.createElement("span");
         place.className = "feed-drawer-place";
         place.textContent = quake.properties.place || "Unknown location";
+
+        if (quake.properties.hasTsunami) {
+            var tTag = document.createElement("span");
+            tTag.className = "feed-drawer-tsunami-tag";
+            tTag.textContent = "🌊 Tsunami";
+            place.appendChild(tTag);
+        }
 
         var meta = document.createElement("span");
         meta.className = "feed-drawer-meta";
@@ -4932,6 +5029,7 @@ function updateSummary(data) {
 
     if (!quakes.length) {
         highlightQuakes = { strongest: null, deepest: null, latest: null };
+        updateTsunamiAlertBanner({ count: 0, strongestTsunami: null, features: [] });
         if (totalEl) totalEl.textContent = "0";
         if (strongestEl) strongestEl.textContent = "—";
         if (deepestEl) deepestEl.textContent = "0 km";
@@ -4964,6 +5062,8 @@ function updateSummary(data) {
         quake.properties.isLatest = quake === latestQuake;
         quake.properties.isSummaryHighlight = quake.properties.isStrongest || quake.properties.isDeepest || quake.properties.isLatest;
     });
+
+    updateTsunamiAlertBanner(getTsunamiSummary(quakes));
 
     if (totalEl) totalEl.textContent = quakes.length.toLocaleString();
     if (strongestEl) strongestEl.textContent = strongestQuake ? getNumericMagnitude(strongestQuake.properties.mag).toFixed(1) + " M" : "—";
@@ -5153,6 +5253,9 @@ window.earthquakeApp.test = {
     handleReducedMotionChange: handleReducedMotionChange,
     hasVisiblePingCandidates: hasVisiblePingCandidates,
     hasTsunamiWarning: hasTsunamiWarning,
+    getTsunamiSummary: getTsunamiSummary,
+    updateTsunamiAlertBanner: updateTsunamiAlertBanner,
+    toggleTsunamiFilter: toggleTsunamiFilter,
     markRegionalChampions: markRegionalChampions,
     normalizeEarthquakeFeature: normalizeEarthquakeFeature,
     setActiveQuakePopup: setActiveQuakePopup,
@@ -5303,8 +5406,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // Magnitude filter chips
     document.querySelectorAll(".mag-filter-chip").forEach(function (chip) {
         chip.addEventListener("click", function () {
+            if (chip.id === "tsunami-filter-chip") {
+                toggleTsunamiFilter();
+                return;
+            }
             minMagnitude = Number(chip.dataset.mag) || 0;
             document.querySelectorAll(".mag-filter-chip").forEach(function (c) {
+                if (c.id === "tsunami-filter-chip") return;
                 var isActive = c === chip;
                 c.classList.toggle("is-active", isActive);
                 c.setAttribute("aria-pressed", String(isActive));
@@ -5314,6 +5422,24 @@ document.addEventListener("DOMContentLoaded", function () {
             updateSummary(getVisibleGeojson());
         });
     });
+
+    // Tsunami Alert Banner Buttons
+    var tsunamiFilterBtn = document.getElementById("tsunami-filter-btn");
+    if (tsunamiFilterBtn) {
+        tsunamiFilterBtn.addEventListener("click", function () {
+            toggleTsunamiFilter();
+        });
+    }
+
+    var tsunamiFlyBtn = document.getElementById("tsunami-fly-btn");
+    if (tsunamiFlyBtn) {
+        tsunamiFlyBtn.addEventListener("click", function () {
+            var summary = getTsunamiSummary(currentGeojson.features);
+            if (summary && summary.strongestTsunami) {
+                flyToQuake(summary.strongestTsunami);
+            }
+        });
+    }
 
     // Activity Feed drawer toggle buttons
     var toggleFeedBtn = document.getElementById("toggle-feed-drawer");

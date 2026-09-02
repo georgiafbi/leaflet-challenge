@@ -6,7 +6,8 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 
 - Quick time-range presets for 1 hour, 24 hours, 7 days, and 30 days, plus all intermediate ranges
 - Real-time location & country search with instant fly-to and match count
-- Minimum magnitude filters (`All`, `2.5+`, `4.5+`, `6.0+`, `7.0+`)
+- Minimum magnitude filters (`All`, `🌊 Tsunami`, `2.5+`, `4.5+`, `6.0+`, `7.0+`)
+- Dynamic **Tsunami Warning Alert Banner** with quick-filter toggle and one-click epicenter navigation
 - Toggleable **Tectonic Plate Boundaries** overlay layer (PB2002 dataset) with glowing fault lines and boundary details
 - Interactive **Recent Activity Feed List** drawer with live filter reflection and one-click navigation
 - Interactive **Seismic Timelapse Playback** mode with timeline scrubber and time indicators

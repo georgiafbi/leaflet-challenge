@@ -208,6 +208,108 @@
         assertEqual(normalizedWithoutTsunami.properties.hasTsunami, false, "normalized feature hasTsunami flag should be false");
     });
 
+    test("calculates active tsunami warning summaries and identifies strongest tsunami event", function () {
+        var emptySummary = helpers.getTsunamiSummary([]);
+        assertEqual(emptySummary.count, 0, "empty feed has 0 tsunami quakes");
+        assertEqual(emptySummary.strongestTsunami, null, "empty feed has no strongest tsunami quake");
+
+        var mixedQuakes = [
+            { id: "q1", properties: { mag: 5.5, hasTsunami: false, place: "Nevada" }, geometry: { coordinates: [-117.1, 38.5, 10] } },
+            { id: "q2", properties: { mag: 7.2, hasTsunami: true, place: "Offshore Maule, Chile" }, geometry: { coordinates: [-73.5, -35.8, 22] } },
+            { id: "q3", properties: { mag: 8.1, hasTsunami: true, place: "Kurile Islands" }, geometry: { coordinates: [154.2, 46.5, 30] } },
+            { id: "q4", properties: { mag: 6.8, hasTsunami: false, place: "Tonga" }, geometry: { coordinates: [-175.2, -21.1, 15] } }
+        ];
+
+        var summary = helpers.getTsunamiSummary(mixedQuakes);
+        assertEqual(summary.count, 2, "identifies exactly 2 tsunami events");
+        assertEqual(summary.strongestTsunami.id, "q3", "identifies M8.1 Kurile Islands as strongest tsunami quake");
+        assertEqual(summary.features.length, 2, "summary includes array of matching tsunami features");
+    });
+
+    test("filters features strictly by active tsunami warning status", function () {
+        var quakes = [
+            { properties: { mag: 7.0, depthKey: "10-30", hasTsunami: true, place: "Fiji" } },
+            { properties: { mag: 6.5, depthKey: "10-30", hasTsunami: false, place: "Vanuatu" } },
+            { properties: { mag: 8.0, depthKey: "0-10", hasTsunami: true, place: "Alaska" } }
+        ];
+
+        var filteredAll = helpers.getFilteredFeatures(quakes, {
+            activeDepthRanges: new Set(["0-10", "10-30"]),
+            minMagnitude: 0,
+            searchQuery: "",
+            tsunamiOnly: false
+        });
+        assertEqual(filteredAll.length, 3, "regular filter returns all quakes");
+
+        var filteredTsunami = helpers.getFilteredFeatures(quakes, {
+            activeDepthRanges: new Set(["0-10", "10-30"]),
+            minMagnitude: 0,
+            searchQuery: "",
+            tsunamiOnly: true
+        });
+        assertEqual(filteredTsunami.length, 2, "tsunamiOnly filter isolates only tsunami quakes");
+        assert(filteredTsunami.every(function (q) { return q.properties.hasTsunami; }), "all filtered results have hasTsunami true");
+    });
+
+    test("updates tsunami alert banner DOM state and action controls", function () {
+        var banner = document.getElementById("tsunami-alert-banner");
+        if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "tsunami-alert-banner";
+            banner.hidden = true;
+            document.body.appendChild(banner);
+        }
+        var titleEl = document.getElementById("tsunami-alert-title");
+        if (!titleEl) {
+            titleEl = document.createElement("strong");
+            titleEl.id = "tsunami-alert-title";
+            banner.appendChild(titleEl);
+        }
+        var descEl = document.getElementById("tsunami-alert-desc");
+        if (!descEl) {
+            descEl = document.createElement("span");
+            descEl.id = "tsunami-alert-desc";
+            banner.appendChild(descEl);
+        }
+
+        // Active tsunami summary
+        helpers.updateTsunamiAlertBanner({
+            count: 2,
+            strongestTsunami: { properties: { mag: 7.8, place: "Offshore Honshu, Japan" } }
+        });
+        assertEqual(banner.hidden, false, "banner is unhidden when tsunami warnings exist");
+        assert(titleEl.textContent.indexOf("TSUNAMI") !== -1, "title mentions TSUNAMI");
+        assert(descEl.textContent.indexOf("2") !== -1, "description displays event count");
+        assert(descEl.textContent.indexOf("Honshu, Japan") !== -1, "description displays strongest location");
+
+        // Zero tsunami summary
+        helpers.updateTsunamiAlertBanner({ count: 0, strongestTsunami: null });
+        assertEqual(banner.hidden, true, "banner is hidden when no tsunami warnings exist");
+    });
+
+    test("renders tsunami warning badge in earthquake popup content", function () {
+        var popupWithTsunami = helpers.buildPopupContent({
+            place: "Near Coast of Northern Chile",
+            mag: 8.2,
+            depth: "25.0",
+            time: 1767225600000,
+            hasTsunami: true
+        });
+        var tsunamiBadge = popupWithTsunami.querySelector(".tsunami-popup-badge");
+        assert(tsunamiBadge !== null, "popup has tsunami warning badge element");
+        assert(tsunamiBadge.textContent.indexOf("Tsunami") !== -1, "badge text mentions Tsunami");
+
+        var popupWithoutTsunami = helpers.buildPopupContent({
+            place: "San Jose, California",
+            mag: 3.5,
+            depth: "8.0",
+            time: 1767225600000,
+            hasTsunami: false
+        });
+        var noTsunamiBadge = popupWithoutTsunami.querySelector(".tsunami-popup-badge");
+        assertEqual(noTsunamiBadge, null, "regular popup does not render tsunami badge");
+    });
+
     test("selects range presets and fallback", function () {
         assertEqual(helpers.getRangePresetByKey("7d").hours, 168, "7-day preset");
         assertEqual(helpers.getRangePresetByKey("30d").hours, 720, "30-day quick preset");

@@ -3007,3 +3007,176 @@ body {
   }
 }
 
+/* ==========================================================================
+   Tsunami Warning Alert System Styles
+   ========================================================================== */
+
+.tsunami-alert-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(8, 47, 73, 0.95), rgba(15, 23, 42, 0.98));
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-left: 5px solid #38bdf8;
+  border-radius: 14px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: tsunamiBannerGlow 3s infinite alternate ease-in-out;
+}
+
+.tsunami-alert-banner[hidden] {
+  display: none !important;
+}
+
+@keyframes tsunamiBannerGlow {
+  0% {
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-color: rgba(56, 189, 248, 0.45);
+  }
+  100% {
+    box-shadow: 0 8px 30px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-color: rgba(125, 211, 252, 0.85);
+  }
+}
+
+.tsunami-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tsunami-alert-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  display: inline-flex;
+  animation: tsunamiWaveBob 2s infinite ease-in-out;
+}
+
+@keyframes tsunamiWaveBob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
+.tsunami-alert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tsunami-alert-text strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+.tsunami-alert-text span {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+}
+
+.tsunami-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tsunami-action-btn {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(14, 165, 233, 0.15);
+  color: #e0f2fe;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.tsunami-action-btn:hover,
+.tsunami-action-btn:focus-visible {
+  background: rgba(14, 165, 233, 0.35);
+  border-color: #38bdf8;
+  color: #fff;
+  outline: 2px solid rgba(56, 189, 248, 0.3);
+  outline-offset: 1px;
+}
+
+.tsunami-action-btn.is-active,
+.tsunami-action-btn[aria-pressed="true"] {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.tsunami-action-btn--primary {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+.tsunami-action-btn--primary:hover {
+  background: #0369a1;
+}
+
+/* Tsunami Filter Chip */
+.mag-filter-chip.tsunami-chip {
+  background: rgba(2, 132, 199, 0.2);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+}
+
+.mag-filter-chip.tsunami-chip:hover,
+.mag-filter-chip.tsunami-chip:focus-visible {
+  background: rgba(2, 132, 199, 0.4);
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.mag-filter-chip.tsunami-chip.is-active,
+.mag-filter-chip.tsunami-chip[aria-pressed="true"] {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+/* Tsunami Popup Badge */
+.tsunami-popup-badge {
+  margin: 6px 0 8px 0;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(8, 47, 73, 0.9), rgba(2, 132, 199, 0.85));
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  color: #f0f9ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+}
+
+/* Feed Drawer Tsunami Tag */
+.feed-drawer-tsunami-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #38bdf8;
+  background: rgba(2, 132, 199, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+
