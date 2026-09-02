@@ -70,6 +70,9 @@ let quakesVisible = true;
 let platesVisible = true;
 let minMagnitude = 0;
 let isTsunamiFilterActive = false;
+let isHeatmapVisible = false;
+let isSeismicAudioEnabled = true;
+let seismicAudioCtx = null;
 let searchQuery = "";
 let isTimelapsePlaying = false;
 let timelapseTimer = null;
@@ -489,6 +492,60 @@ function hasTsunamiWarning(feature) {
     return val === 1 || val === "1" || val === true;
 }
 
+function toSuperscript(num) {
+    var str = String(num);
+    var supers = {
+        "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+        "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻"
+    };
+    return str.split("").map(function (c) { return supers[c] || c; }).join("");
+}
+
+function formatEnergyString(joules, tntTons) {
+    if (!joules || joules <= 0) return "0 J";
+    var exponent = Math.floor(Math.log10(joules));
+    var mantissa = (joules / Math.pow(10, exponent)).toFixed(1);
+    var jouleText = mantissa + " × 10" + toSuperscript(exponent) + " J";
+
+    var tntText = "";
+    if (tntTons >= 1e6) {
+        tntText = (tntTons / 1e6).toFixed(1) + " Mt TNT";
+    } else if (tntTons >= 1e3) {
+        tntText = (tntTons / 1e3).toFixed(1) + " kt TNT";
+    } else if (tntTons >= 1) {
+        tntText = tntTons.toFixed(1) + " tons TNT";
+    } else {
+        tntText = (tntTons * 1000).toFixed(0) + " kg TNT";
+    }
+
+    return jouleText + " (~" + tntText + ")";
+}
+
+function calculateSeismicEnergy(mag) {
+    var numericMag = getNumericMagnitude(mag);
+    if (numericMag === null || numericMag < 0) {
+        return {
+            joules: 0,
+            tntTons: 0,
+            energyWeight: 0,
+            label: "0 Joules"
+        };
+    }
+    // Gutenberg-Richter / Kanamori empirical relation: log10(E) = 4.8 + 1.5 * Mw
+    var exponent = 4.8 + (1.5 * numericMag);
+    var joules = Math.pow(10, exponent);
+    var tntTons = joules / 4.184e9; // 1 ton TNT = 4.184 x 10^9 J
+    var energyWeight = Math.max(0, Math.min(10, Number((numericMag * 1.1).toFixed(2))));
+    var label = formatEnergyString(joules, tntTons);
+
+    return {
+        joules: joules,
+        tntTons: tntTons,
+        energyWeight: energyWeight,
+        label: label
+    };
+}
+
 function normalizeEarthquakeFeature(feature) {
     if (!feature || feature.type !== "Feature" || !feature.geometry || feature.geometry.type !== "Point" ||
             !Array.isArray(feature.geometry.coordinates) || !feature.properties ||
@@ -520,6 +577,12 @@ function normalizeEarthquakeFeature(feature) {
     properties.shapeKey = getMagnitudeShapeKey(properties.mag);
     properties.magnitudeLabel = formatMagnitudeLabel(properties.mag);
     properties.hasTsunami = hasTsunamiWarning(feature);
+
+    var energy = calculateSeismicEnergy(properties.mag);
+    properties.energyJoules = energy.joules;
+    properties.energyTntTons = energy.tntTons;
+    properties.energyWeight = energy.energyWeight;
+    properties.energyLabel = energy.label;
 
     var location = resolveLocationTokens(properties.place, properties.country, properties.countryCode, lon, lat);
     properties.state = location.state;
@@ -795,6 +858,9 @@ function buildPopupContent(props) {
 
     appendPopupRow(content, "Magnitude", formatMagnitudeLabel(props.mag));
     appendPopupRow(content, "Depth", props.depth + " km");
+    if (props.energyLabel) {
+        appendPopupRow(content, "Seismic energy", props.energyLabel, true);
+    }
     appendPopupRow(content, "Country/area", props.displayRegion || "Unknown");
     appendPopupRow(content, "Type", props.type || "earthquake");
     appendPopupRow(content, "Time", eventTime, true);
@@ -1241,6 +1307,121 @@ function toggleTsunamiFilter(active) {
     renderFeedDrawer();
 }
 
+function getSeismicAudioProfile(magnitude, depth, hasTsunami) {
+    var mag = Number.isFinite(Number(magnitude)) ? Number(magnitude) : 2.5;
+    var dep = Number.isFinite(Number(depth)) ? Math.max(0, Number(depth)) : 10;
+    var tsunami = Boolean(hasTsunami);
+
+    // Depth determines fundamental frequency: shallow crust = 220-360Hz, deep mantle (700km) = 45-80Hz
+    var depthRatio = Math.min(dep / 600, 1);
+    var baseFreq = Math.round(320 - (depthRatio * 265)); // 320Hz down to 55Hz
+    var filterCutoff = Math.round(3000 - (depthRatio * 2820)); // 3000Hz down to 180Hz
+
+    // Magnitude scales duration & volume exponentially
+    var normalizedMag = Math.max(0.5, Math.min(mag, 9.5));
+    var duration = Number((0.10 + Math.pow(normalizedMag / 9.5, 2.2) * 1.5).toFixed(2));
+    var gain = Number((0.08 + Math.min(normalizedMag / 9.5, 1) * 0.36).toFixed(2));
+
+    return {
+        frequency: baseFreq,
+        subFrequency: Math.max(30, Math.round(baseFreq * 0.5)),
+        filterCutoff: Math.max(120, filterCutoff),
+        duration: duration,
+        gain: gain,
+        hasTsunamiHarmonic: tsunami,
+        tsunamiFrequency: 587.33 // D5 oceanic resonant chime
+    };
+}
+
+function setSeismicAudioEnabled(enabled) {
+    isSeismicAudioEnabled = enabled !== undefined ? Boolean(enabled) : !isSeismicAudioEnabled;
+    var btn = document.getElementById("toggle-seismic-audio");
+    var label = document.getElementById("seismic-audio-label");
+    if (btn) {
+        btn.classList.toggle("is-active", isSeismicAudioEnabled);
+        btn.setAttribute("aria-pressed", String(isSeismicAudioEnabled));
+        var icon = btn.querySelector(".btn-icon");
+        if (icon) icon.textContent = isSeismicAudioEnabled ? "🔊" : "🔇";
+    }
+    if (label) {
+        label.textContent = isSeismicAudioEnabled ? "Audio On" : "Muted";
+    }
+    return isSeismicAudioEnabled;
+}
+
+function playSeismicTone(feature, options) {
+    if (!isSeismicAudioEnabled) return;
+    if (reducedMotionQuery.matches && (!options || !options.force)) return;
+    try {
+        if (!seismicAudioCtx) {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) seismicAudioCtx = new AudioContext();
+        }
+        if (seismicAudioCtx && seismicAudioCtx.state === "suspended") {
+            seismicAudioCtx.resume();
+        }
+        if (!seismicAudioCtx) return;
+
+        var props = (feature && feature.properties) || {};
+        var mag = props.mag !== undefined ? props.mag : 3.0;
+        var depth = props.depth !== undefined ? props.depth : 10;
+        var tsunami = Boolean(props.hasTsunami);
+
+        var profile = getSeismicAudioProfile(mag, depth, tsunami);
+        var now = seismicAudioCtx.currentTime;
+        var isTimelapseMode = options && options.timelapse;
+        var gainMultiplier = isTimelapseMode ? 0.55 : 1.0;
+        var effectiveDuration = isTimelapseMode ? Math.min(profile.duration, 0.45) : profile.duration;
+
+        var masterGain = seismicAudioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.exponentialRampToValueAtTime(profile.gain * gainMultiplier, now + 0.018);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + effectiveDuration);
+
+        var filter = seismicAudioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(profile.filterCutoff, now);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(50, profile.filterCutoff * 0.4), now + effectiveDuration);
+
+        masterGain.connect(filter);
+        filter.connect(seismicAudioCtx.destination);
+
+        // Main seismic body wave (sine/triangle low frequency)
+        var osc = seismicAudioCtx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(profile.frequency, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(28, profile.frequency * 0.72), now + effectiveDuration);
+        osc.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + effectiveDuration);
+
+        // Sub-bass tectonic rumble oscillator
+        var subOsc = seismicAudioCtx.createOscillator();
+        subOsc.type = "triangle";
+        subOsc.frequency.setValueAtTime(profile.subFrequency, now);
+        subOsc.connect(masterGain);
+        subOsc.start(now);
+        subOsc.stop(now + effectiveDuration);
+
+        // Tsunami oceanic harmonic chime if active
+        if (profile.hasTsunamiHarmonic) {
+            var tsuOsc = seismicAudioCtx.createOscillator();
+            var tsuGain = seismicAudioCtx.createGain();
+            tsuGain.gain.setValueAtTime(0.001, now);
+            tsuGain.gain.exponentialRampToValueAtTime(0.18, now + 0.04);
+            tsuGain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(effectiveDuration, 0.65));
+            tsuOsc.type = "sine";
+            tsuOsc.frequency.setValueAtTime(profile.tsunamiFrequency, now);
+            tsuOsc.connect(tsuGain);
+            tsuGain.connect(seismicAudioCtx.destination);
+            tsuOsc.start(now);
+            tsuOsc.stop(now + Math.max(effectiveDuration, 0.65));
+        }
+    } catch (e) {
+        // Non-blocking audio fallback
+    }
+}
+
 function getFilteredFeatures(features, options) {
     var depthSet = options && options.activeDepthRanges ? options.activeDepthRanges : activeDepthRanges;
     var minMag = options && options.minMagnitude !== undefined ? options.minMagnitude : minMagnitude;
@@ -1344,6 +1525,9 @@ function flyToQuake(feature) {
     // Trigger regional airship whistle & light ping to depth color
     var vIdx = getAirshipVesselForLatitude(feature.geometry.coordinates[1]);
     triggerAirshipDetectionPing(vIdx, feature, true);
+
+    // Play synthesized seismic sound profile
+    playSeismicTone(feature);
 }
 
 function resetGlobeView() {
@@ -3902,6 +4086,20 @@ function setTectonicPlatesVisibility(visible) {
     }
 }
 
+function setHeatmapVisibility(visible) {
+    isHeatmapVisible = Boolean(visible);
+    if (globeMap) {
+        if (globeMap.getLayer("quake-energy-heatmap")) {
+            globeMap.setLayoutProperty("quake-energy-heatmap", "visibility", isHeatmapVisible ? "visible" : "none");
+        }
+    }
+    var input = document.getElementById("heatmap-visibility");
+    if (input) {
+        input.checked = isHeatmapVisible;
+    }
+    return isHeatmapVisible;
+}
+
 function resetMapFilters() {
     activeDepthRanges = new Set(depthRangeDefinitions.map(function (range) {
         return range.key;
@@ -4268,6 +4466,25 @@ function buildMapPanels() {
     platesToggle.appendChild(platesText);
     baseContent.appendChild(platesToggle);
 
+    var heatmapToggle = document.createElement("label");
+    heatmapToggle.className = "base-option";
+    var heatmapInput = document.createElement("input");
+    heatmapInput.type = "checkbox";
+    heatmapInput.id = "heatmap-visibility";
+    heatmapInput.checked = isHeatmapVisible;
+    heatmapInput.addEventListener("change", function (event) {
+        setHeatmapVisibility(event.target.checked);
+        if (compactViewportQuery.matches) {
+            setMapPanelExpanded(basePanel, baseHeader, baseContent, false);
+            baseHeader.focus();
+        }
+    });
+    var heatmapText = document.createElement("span");
+    heatmapText.textContent = "Energy Heatmap";
+    heatmapToggle.appendChild(heatmapInput);
+    heatmapToggle.appendChild(heatmapText);
+    baseContent.appendChild(heatmapToggle);
+
     var airshipToggle = document.createElement("label");
     airshipToggle.className = "base-option";
     var airshipInput = document.createElement("input");
@@ -4608,6 +4825,57 @@ function createMap() {
         });
         globeMap.addImage("selection-ring", createSelectionRingImage(), { pixelRatio: 2 });
         globeMap.addImage("champion-selection-ring", createChampionSelectionRingImage(), { pixelRatio: 2 });
+
+        // Cumulative Seismic Energy Heatmap Layer (Weighted by physical Joule release)
+        globeMap.addLayer({
+            id: "quake-energy-heatmap",
+            type: "heatmap",
+            source: "earthquakes",
+            layout: {
+                "visibility": isHeatmapVisible ? "visible" : "none"
+            },
+            paint: {
+                // Weight each earthquake by its log-normalized physical Joule energy output
+                "heatmap-weight": [
+                    "interpolate", ["linear"], ["coalesce", ["get", "energyWeight"], 0],
+                    0, 0,
+                    1, 0.05,
+                    5, 0.35,
+                    10, 1.0
+                ],
+                // Increase intensity with zoom
+                "heatmap-intensity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    0, 0.6,
+                    3, 1.2,
+                    7, 2.5
+                ],
+                // High-energy thermal gradient: transparent -> sapphire -> emerald -> solar amber -> magma red -> brilliant incandescent
+                "heatmap-color": [
+                    "interpolate", ["linear"], ["heatmap-density"],
+                    0, "rgba(0, 0, 0, 0)",
+                    0.15, "rgba(14, 165, 233, 0.45)",
+                    0.35, "rgba(34, 197, 94, 0.65)",
+                    0.60, "rgba(234, 179, 8, 0.82)",
+                    0.85, "rgba(239, 68, 68, 0.94)",
+                    1.0, "rgba(255, 255, 255, 0.98)"
+                ],
+                // Smooth radius scaling with zoom
+                "heatmap-radius": [
+                    "interpolate", ["linear"], ["zoom"],
+                    0, 10,
+                    3, 26,
+                    7, 52
+                ],
+                // Heatmap opacity
+                "heatmap-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    0, 0.85,
+                    7, 0.65,
+                    9, 0.2
+                ]
+            }
+        });
 
         globeMap.addLayer({
             id: "quake-clusters",
@@ -5025,6 +5293,7 @@ function updateSummary(data) {
     var strongestEl = document.getElementById("strongest-magnitude");
     var deepestEl = document.getElementById("deepest-depth");
     var latestEl = document.getElementById("latest-event");
+    var energyEl = document.getElementById("total-energy");
     var announcementEl = document.getElementById("feed-announcement");
 
     if (!quakes.length) {
@@ -5033,6 +5302,7 @@ function updateSummary(data) {
         if (totalEl) totalEl.textContent = "0";
         if (strongestEl) strongestEl.textContent = "—";
         if (deepestEl) deepestEl.textContent = "0 km";
+        if (energyEl) energyEl.textContent = "0 J";
         if (latestEl) {
             latestEl.textContent = "--";
             latestEl.removeAttribute("title");
@@ -5055,6 +5325,12 @@ function updateSummary(data) {
         return quake.properties.time > latest.properties.time ? quake : latest;
     }, quakes[0]);
 
+    var totalJoules = quakes.reduce(function (sum, quake) {
+        var j = quake && quake.properties && quake.properties.energyJoules;
+        return sum + (typeof j === "number" && Number.isFinite(j) ? j : 0);
+    }, 0);
+    var totalTntTons = totalJoules / 4.184e9;
+
     highlightQuakes = { strongest: strongestQuake, deepest: deepestQuake, latest: latestQuake };
     quakes.forEach(function (quake) {
         quake.properties.isStrongest = quake === strongestQuake;
@@ -5068,6 +5344,10 @@ function updateSummary(data) {
     if (totalEl) totalEl.textContent = quakes.length.toLocaleString();
     if (strongestEl) strongestEl.textContent = strongestQuake ? getNumericMagnitude(strongestQuake.properties.mag).toFixed(1) + " M" : "—";
     if (deepestEl) deepestEl.textContent = Number(deepestQuake.geometry.coordinates[2] || 0).toFixed(0) + " km";
+    if (energyEl) {
+        energyEl.textContent = formatEnergyString(totalJoules, totalTntTons);
+        energyEl.title = totalJoules.toExponential(2) + " Joules (" + (totalTntTons >= 1e6 ? (totalTntTons / 1e6).toFixed(2) + " Megatons TNT" : totalTntTons.toFixed(1) + " tons TNT") + ")";
+    }
     if (latestEl) {
         latestEl.textContent = formatRelativeTime(latestQuake.properties.time);
         latestEl.title = new Date(latestQuake.properties.time).toLocaleString();
@@ -5075,7 +5355,8 @@ function updateSummary(data) {
     if (announcementEl) {
         announcementEl.textContent = quakes.length.toLocaleString() + " earthquakes loaded; strongest " +
             (strongestQuake ? "magnitude " + getNumericMagnitude(strongestQuake.properties.mag).toFixed(1) : "magnitude unavailable") +
-            "; deepest " + Number(deepestQuake.geometry.coordinates[2]).toFixed(0) + " kilometers.";
+            "; deepest " + Number(deepestQuake.geometry.coordinates[2]).toFixed(0) + " kilometers; cumulative energy " +
+            formatEnergyString(totalJoules, totalTntTons) + ".";
     }
 }
 
@@ -5256,6 +5537,9 @@ window.earthquakeApp.test = {
     getTsunamiSummary: getTsunamiSummary,
     updateTsunamiAlertBanner: updateTsunamiAlertBanner,
     toggleTsunamiFilter: toggleTsunamiFilter,
+    getSeismicAudioProfile: getSeismicAudioProfile,
+    playSeismicTone: playSeismicTone,
+    setSeismicAudioEnabled: setSeismicAudioEnabled,
     markRegionalChampions: markRegionalChampions,
     normalizeEarthquakeFeature: normalizeEarthquakeFeature,
     setActiveQuakePopup: setActiveQuakePopup,
@@ -5270,6 +5554,10 @@ window.earthquakeApp.test = {
     matchesMagnitudeFilter: matchesMagnitudeFilter,
     getFilteredFeatures: getFilteredFeatures,
     setTectonicPlatesVisibility: setTectonicPlatesVisibility,
+    setHeatmapVisibility: setHeatmapVisibility,
+    calculateSeismicEnergy: calculateSeismicEnergy,
+    formatEnergyString: formatEnergyString,
+    toSuperscript: toSuperscript,
     createAirshipImage: createAirshipImage,
     build3DAirshipMesh: build3DAirshipMesh,
     init3DAirshipInspector: init3DAirshipInspector,
@@ -5438,6 +5726,14 @@ document.addEventListener("DOMContentLoaded", function () {
             if (summary && summary.strongestTsunami) {
                 flyToQuake(summary.strongestTsunami);
             }
+        });
+    }
+
+    // Seismic Sonification Audio Toggle
+    var toggleAudioBtn = document.getElementById("toggle-seismic-audio");
+    if (toggleAudioBtn) {
+        toggleAudioBtn.addEventListener("click", function () {
+            setSeismicAudioEnabled();
         });
     }
 

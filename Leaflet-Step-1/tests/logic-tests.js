@@ -310,6 +310,105 @@
         assertEqual(noTsunamiBadge, null, "regular popup does not render tsunami badge");
     });
 
+    test("computes acoustic frequency, duration, and gain profiles for seismic sonification", function () {
+        var shallowMicro = helpers.getSeismicAudioProfile(1.5, 5, false);
+        assert(shallowMicro.duration <= 0.25, "micro quake has brief duration");
+        assert(shallowMicro.frequency >= 200, "shallow micro quake has higher crisp frequency");
+        assert(shallowMicro.gain <= 0.20, "micro quake has gentle volume");
+        assertEqual(shallowMicro.hasTsunamiHarmonic, false, "no tsunami harmonic on regular quake");
+
+        var deepMantle = helpers.getSeismicAudioProfile(6.0, 580, false);
+        assert(deepMantle.frequency < 100, "deep mantle quake produces subterranean sub-bass frequency");
+        assert(deepMantle.filterCutoff < 300, "deep quake has heavy low-pass filter cutoff");
+
+        var monsterTsunami = helpers.getSeismicAudioProfile(8.8, 18, true);
+        assert(monsterTsunami.duration >= 1.0, "major quake has extended reverberant duration");
+        assert(monsterTsunami.gain >= 0.35, "major quake has strong tactile gain");
+        assertEqual(monsterTsunami.hasTsunamiHarmonic, true, "tsunami quake includes oceanic overtone harmonic");
+
+        var fallback = helpers.getSeismicAudioProfile(null, "invalid", false);
+        assert(fallback && typeof fallback.frequency === "number", "fallback profile provides valid numeric frequency");
+    });
+
+    test("toggles seismic audio enabled state and synchronizes DOM controls", function () {
+        var button = document.getElementById("toggle-seismic-audio");
+        if (!button) {
+            button = document.createElement("button");
+            button.id = "toggle-seismic-audio";
+            var label = document.createElement("span");
+            label.id = "seismic-audio-label";
+            button.appendChild(label);
+            document.body.appendChild(button);
+        }
+
+        var enabled = helpers.setSeismicAudioEnabled(true);
+        assertEqual(enabled, true, "audio enabled state set to true");
+        assertEqual(button.getAttribute("aria-pressed"), "true", "button aria-pressed is true");
+        assert(button.classList.contains("is-active"), "button has is-active class");
+
+        var disabled = helpers.setSeismicAudioEnabled(false);
+        assertEqual(disabled, false, "audio enabled state set to false");
+        assertEqual(button.getAttribute("aria-pressed"), "false", "button aria-pressed is false");
+        assert(!button.classList.contains("is-active"), "button does not have is-active class");
+
+        // Restore active state
+        helpers.setSeismicAudioEnabled(true);
+    });
+
+    test("calculates seismic energy in Joules, TNT equivalent, and energy weight based on Gutenberg-Richter formula", function () {
+        var m2 = helpers.calculateSeismicEnergy(2.0);
+        assert(m2.joules > 6e7 && m2.joules < 7e7, "M2.0 energy is ~6.3x10^7 Joules");
+        assert(m2.label.indexOf("kg TNT") !== -1, "M2.0 label formatted in kg TNT");
+        assert(m2.energyWeight > 0 && m2.energyWeight <= 3, "M2.0 has small energy weight");
+
+        var m5 = helpers.calculateSeismicEnergy(5.0);
+        assert(m5.joules > 1.9e12 && m5.joules < 2.1e12, "M5.0 energy is ~2.0x10^12 Joules");
+        assert(m5.label.indexOf("tons TNT") !== -1, "M5.0 label formatted in tons TNT");
+
+        var m75 = helpers.calculateSeismicEnergy(7.5);
+        assert(m75.joules > 1.0e16 && m75.joules < 1.3e16, "M7.5 energy is ~1.1x10^16 Joules");
+        assert(m75.label.indexOf("Mt TNT") !== -1, "M7.5 label formatted in Megatons TNT");
+        assert(m75.energyWeight >= 8.0, "M7.5 has high energy weight");
+
+        var fallback = helpers.calculateSeismicEnergy(null);
+        assertEqual(fallback.joules, 0, "fallback Joules is 0");
+        assertEqual(fallback.energyWeight, 0, "fallback energy weight is 0");
+    });
+
+    test("toggles seismic energy heatmap layer visibility and DOM control", function () {
+        var input = document.getElementById("heatmap-visibility");
+        if (!input) {
+            input = document.createElement("input");
+            input.type = "checkbox";
+            input.id = "heatmap-visibility";
+            document.body.appendChild(input);
+        }
+
+        var visible = helpers.setHeatmapVisibility(true);
+        assertEqual(visible, true, "heatmap visibility enabled");
+        assertEqual(input.checked, true, "DOM checkbox checked");
+
+        var hidden = helpers.setHeatmapVisibility(false);
+        assertEqual(hidden, false, "heatmap visibility disabled");
+        assertEqual(input.checked, false, "DOM checkbox unchecked");
+
+        // Restore
+        helpers.setHeatmapVisibility(false);
+    });
+
+    test("normalizes earthquake features with physical energy properties", function () {
+        var feature = {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [-122.4, 37.7, 10.5] },
+            properties: { place: "San Francisco, CA", mag: 6.8, time: 1767225600000 }
+        };
+        var normalized = helpers.normalizeEarthquakeFeature(feature);
+        assert(normalized !== null, "feature normalizes successfully");
+        assert(typeof normalized.properties.energyJoules === "number" && normalized.properties.energyJoules > 1e14, "energyJoules computed on normalized feature");
+        assert(typeof normalized.properties.energyWeight === "number" && normalized.properties.energyWeight > 7, "energyWeight computed on normalized feature");
+        assert(typeof normalized.properties.energyLabel === "string" && normalized.properties.energyLabel.indexOf("TNT") !== -1, "energyLabel string generated on normalized feature");
+    });
+
     test("selects range presets and fallback", function () {
         assertEqual(helpers.getRangePresetByKey("7d").hours, 168, "7-day preset");
         assertEqual(helpers.getRangePresetByKey("30d").hours, 720, "30-day quick preset");

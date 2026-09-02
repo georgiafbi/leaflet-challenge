@@ -8,6 +8,8 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 - Real-time location & country search with instant fly-to and match count
 - Minimum magnitude filters (`All`, `🌊 Tsunami`, `2.5+`, `4.5+`, `6.0+`, `7.0+`)
 - Dynamic **Tsunami Warning Alert Banner** with quick-filter toggle and one-click epicenter navigation
+- Real-time **Web Audio Seismic Sonification** synthesizing acoustic body/sub-bass rumble and tsunami harmonic tones on selection & timelapse
+- Toggleable **Cumulative Seismic Energy Heatmap Layer** weighted by empirical Gutenberg-Richter physical Joule release ($\log_{10} E = 4.8 + 1.5 M$)
 - Toggleable **Tectonic Plate Boundaries** overlay layer (PB2002 dataset) with glowing fault lines and boundary details
 - Interactive **Recent Activity Feed List** drawer with live filter reflection and one-click navigation
 - Interactive **Seismic Timelapse Playback** mode with timeline scrubber and time indicators

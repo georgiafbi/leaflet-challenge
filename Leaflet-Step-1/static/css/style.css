@@ -215,7 +215,7 @@ body {
 
 .stats-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -242,6 +242,14 @@ body {
 .stat-card strong {
   font-size: clamp(1.15rem, 2vw, 1.55rem);
   color: #f8fafc;
+}
+
+.stat-card--energy strong {
+  font-size: clamp(0.88rem, 1.35vw, 1.2rem);
+  color: #fde047;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card.is-clickable {
@@ -3178,5 +3186,39 @@ body {
   border-radius: 4px;
   margin-left: 6px;
 }
+
+/* ==========================================================================
+   Seismic Sonification Audio Controls
+   ========================================================================== */
+
+.toolbar-btn.audio-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn.audio-btn:hover {
+  border-color: #38bdf8;
+  color: #e2e8f0;
+}
+
+.toolbar-btn.audio-btn.is-active,
+.toolbar-btn.audio-btn[aria-pressed="true"] {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.toolbar-btn.audio-btn.is-active .btn-icon {
+  animation: audioWavePulse 2s infinite ease-in-out;
+}
+
+@keyframes audioWavePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
 
 
