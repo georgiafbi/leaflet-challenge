@@ -41,16 +41,38 @@ def cmd_diagnose(args: argparse.Namespace) -> None:
     else:
         print("  [OK] No issues detected.")
 
+    if getattr(args, "sync", False):
+        print("\n" + "=" * 80)
+        print(" AUTONOMOUS GIT SYNCHRONIZATION")
+        print("=" * 80)
+        res = brain.auto_sync()
+        print(f"  Result: {res}")
+
+
+def cmd_sync(args: argparse.Namespace) -> None:
+    brain = LeafletChallengeMotherBrain(PROJECT_ROOT)
+    print("=" * 80)
+    print(" LEAFLET CHALLENGE: AUTONOMOUS GIT SYNCHRONIZATION")
+    print(f" Root: {PROJECT_ROOT}")
+    print("=" * 80)
+    res = brain.auto_sync()
+    print(f"  Result: {res}")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Leaflet Challenge Swarm Diagnostics")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("diagnose", help="Run full Mother Brain & Swarm diagnosis")
+    p_diag = subparsers.add_parser("diagnose", help="Run full Mother Brain & Swarm diagnosis")
+    p_diag.add_argument("--sync", action="store_true", help="Automatically commit and push any autonomous changes")
+
+    subparsers.add_parser("sync", help="Execute autonomous git synchronization to GitHub")
 
     args = parser.parse_args()
     if args.command == "diagnose":
         cmd_diagnose(args)
+    elif args.command == "sync":
+        cmd_sync(args)
 
 
 if __name__ == "__main__":
