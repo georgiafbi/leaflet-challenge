@@ -73,6 +73,13 @@
         <button class="mag-filter-chip" type="button" data-mag="7.0" aria-pressed="false">7.0+</button>
       </div>
 
+      <div class="origin-filters" role="group" aria-label="Event origin filter">
+        <span class="origin-filter-label">Origin</span>
+        <button class="origin-filter-chip is-active" type="button" data-origin="all" aria-pressed="true">All</button>
+        <button class="origin-filter-chip" type="button" data-origin="natural" aria-pressed="false">🌍 Natural</button>
+        <button id="induced-filter-chip" class="origin-filter-chip induced-chip" type="button" data-origin="induced" aria-pressed="false">⛏️ Induced</button>
+      </div>
+
       <div class="toolbar-actions">
         <button id="toggle-seismic-audio" class="toolbar-btn audio-btn is-active" type="button" aria-pressed="true" title="Toggle seismic sonification audio feedback">
           <span class="btn-icon" aria-hidden="true">🔊</span>
@@ -123,6 +130,10 @@
       <div class="stat-card stat-card--energy">
         <span class="stat-label">Total Energy</span>
         <strong id="total-energy">--</strong>
+      </div>
+      <div class="stat-card stat-card--induced">
+        <span class="stat-label">Human-Induced</span>
+        <strong id="induced-events-count">0</strong>
       </div>
     </section>
     <p id="feed-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -292,7 +303,16 @@
             </div>
           </article>
 
-          <!-- Card 6: Aerial Survey Fleet (Victorian Dirigibles) -->
+          <!-- Card 7: Human-Induced vs Natural Quakes -->
+          <article class="guide-card">
+            <div class="guide-card-icon" aria-hidden="true">⛏️</div>
+            <div class="guide-card-text">
+              <h3>Human-Induced vs. Natural Quakes</h3>
+              <p>Filter between natural tectonic events and human-induced seismicity (quarry blasts, mining explosions, rock bursts). Human-induced tremors trigger custom explosive acoustic sonification and amber alert badges.</p>
+            </div>
+          </article>
+
+          <!-- Card 8: Aerial Survey Fleet (Victorian Dirigibles) -->
           <article class="guide-card guide-card-wide">
             <div class="guide-card-icon" aria-hidden="true">🛸</div>
             <div class="guide-card-text">

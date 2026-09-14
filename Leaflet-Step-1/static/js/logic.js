@@ -70,6 +70,7 @@ let quakesVisible = true;
 let platesVisible = true;
 let minMagnitude = 0;
 let isTsunamiFilterActive = false;
+let activeOriginFilter = "all";
 let isHeatmapVisible = false;
 let isSeismicAudioEnabled = true;
 let seismicAudioCtx = null;
@@ -546,6 +547,54 @@ function calculateSeismicEnergy(mag) {
     };
 }
 
+function classifyEventOrigin(type) {
+    var rawType = (typeof type === "string") ? type.trim().toLowerCase() : "earthquake";
+    var humanInducedTypes = {
+        "quarry blast": { category: "Quarry Blast", icon: "⛏️", description: "Surface industrial blasting at aggregate quarry" },
+        "mining explosion": { category: "Mining Explosion", icon: "⛏️", description: "Subsurface explosion associated with mining operations" },
+        "rock burst": { category: "Rock Burst", icon: "💥", description: "Spontaneous violent rock failure in deep mine" },
+        "rockburst": { category: "Rock Burst", icon: "💥", description: "Spontaneous violent rock failure in deep mine" },
+        "explosion": { category: "Explosion", icon: "💥", description: "Detonation or explosive event" },
+        "chemical explosion": { category: "Chemical Explosion", icon: "💥", description: "Industrial chemical explosion" },
+        "nuclear explosion": { category: "Nuclear Explosion", icon: "☢️", description: "Nuclear test or detonation" },
+        "experimental explosion": { category: "Experimental Explosion", icon: "💥", description: "Controlled experimental seismic explosion" },
+        "collapse": { category: "Cavity Collapse", icon: "🏚️", description: "Mine or structural cavity collapse" },
+        "mine collapse": { category: "Mine Collapse", icon: "🏚️", description: "Mine roof or shaft collapse" }
+    };
+
+    if (humanInducedTypes[rawType]) {
+        var info = humanInducedTypes[rawType];
+        return {
+            isInduced: true,
+            eventOrigin: "induced",
+            type: rawType,
+            category: info.category,
+            icon: info.icon,
+            label: "Human-Induced: " + info.category,
+            badgeLabel: info.icon + " " + info.category,
+            fullDescription: info.description
+        };
+    }
+
+    var naturalCategory = "Natural Earthquake";
+    if (rawType === "volcanic eruption" || rawType === "volcanic tremor") {
+        naturalCategory = "Volcanic Activity";
+    } else if (rawType === "ice quake") {
+        naturalCategory = "Ice Quake (Cryoseism)";
+    }
+
+    return {
+        isInduced: false,
+        eventOrigin: "natural",
+        type: rawType || "earthquake",
+        category: naturalCategory,
+        icon: "🌍",
+        label: "Natural Tectonic: " + naturalCategory,
+        badgeLabel: "🌍 " + naturalCategory,
+        fullDescription: "Natural tectonic plate or volcanic movement"
+    };
+}
+
 function formatPagerAlert(alert) {
     if (!alert || typeof alert !== "string") {
         return null;
@@ -597,8 +646,9 @@ function exportActiveFeaturesToCsv(features) {
     }
     var headers = [
         "id", "timestamp_utc", "place", "magnitude", "depth_km",
-        "latitude", "longitude", "alert_level", "felt_reports",
-        "mmi_intensity", "tsunami_warning", "energy_joules", "usgs_url"
+        "latitude", "longitude", "event_type", "event_origin", "is_induced",
+        "alert_level", "felt_reports", "mmi_intensity", "tsunami_warning",
+        "energy_joules", "usgs_url"
     ];
     var rows = [headers.join(",")];
 
@@ -617,6 +667,9 @@ function exportActiveFeaturesToCsv(features) {
             p.depth || (coords[2] !== undefined ? coords[2] : ""),
             coords[1] !== undefined ? coords[1] : "",
             coords[0] !== undefined ? coords[0] : "",
+            '"' + (p.type || "earthquake") + '"',
+            '"' + (p.eventOrigin || (p.isInduced ? "induced" : "natural")) + '"',
+            p.isInduced ? 1 : 0,
             p.alert || "",
             p.felt || 0,
             p.mmi || "",
@@ -718,6 +771,13 @@ function normalizeEarthquakeFeature(feature) {
     // Significance (0 - 1000)
     properties.sig = Number.isFinite(Number(properties.sig)) ? Math.max(0, Math.round(Number(properties.sig))) : 0;
 
+    // Event Origin & Type (Natural Tectonic vs Human-Induced / Anthropogenic)
+    var originInfo = classifyEventOrigin(properties.type);
+    properties.isInduced = originInfo.isInduced;
+    properties.eventOrigin = originInfo.eventOrigin;
+    properties.eventTypeName = originInfo.category;
+    properties.origin = originInfo;
+
     var normalized = Object.assign({}, feature, {
         geometry: Object.assign({}, feature.geometry, {
             coordinates: [lon, lat, depth].concat(coordinates.slice(3))
@@ -770,6 +830,8 @@ function markRegionalChampions(features) {
             feature.properties.displayRegion || "",
             feature.properties.championGroup || "",
             feature.properties.type || "",
+            feature.properties.eventOrigin || "",
+            feature.properties.isInduced ? "induced anthropogenic blast quarry explosion" : "natural tectonic",
             depthCat,
             "m" + (feature.properties.mag !== null ? feature.properties.mag : ""),
             "mag " + (feature.properties.mag !== null ? feature.properties.mag : "")
@@ -988,6 +1050,13 @@ function buildPopupContent(props) {
         content.appendChild(pagerBadge);
     }
 
+    if (props.origin && props.origin.isInduced) {
+        var inducedBadge = document.createElement("p");
+        inducedBadge.className = "origin-popup-badge origin-induced";
+        inducedBadge.textContent = "⛏️ HUMAN-INDUCED: " + props.origin.category + " (" + props.origin.fullDescription + ")";
+        content.appendChild(inducedBadge);
+    }
+
     appendPopupRow(content, "Magnitude", formatMagnitudeLabel(props.mag));
     appendPopupRow(content, "Depth", props.depth + " km");
     if (props.felt > 0) {
@@ -1003,7 +1072,11 @@ function buildPopupContent(props) {
         appendPopupRow(content, "Seismic energy", props.energyLabel, true);
     }
     appendPopupRow(content, "Country/area", props.displayRegion || "Unknown");
-    appendPopupRow(content, "Type", props.type || "earthquake");
+    var typeDisplay = props.type || "earthquake";
+    if (props.origin && props.origin.isInduced) {
+        typeDisplay = "⛏️ " + props.origin.category + " (Human-Induced)";
+    }
+    appendPopupRow(content, "Type", typeDisplay);
     appendPopupRow(content, "Time", eventTime, true);
     if (props.enrichmentState === "loading") {
         appendPopupRow(content, "USGS context", "Loading scientific details…", true);
@@ -1448,10 +1521,11 @@ function toggleTsunamiFilter(active) {
     renderFeedDrawer();
 }
 
-function getSeismicAudioProfile(magnitude, depth, hasTsunami) {
+function getSeismicAudioProfile(magnitude, depth, hasTsunami, isInduced) {
     var mag = Number.isFinite(Number(magnitude)) ? Number(magnitude) : 2.5;
     var dep = Number.isFinite(Number(depth)) ? Math.max(0, Number(depth)) : 10;
     var tsunami = Boolean(hasTsunami);
+    var induced = Boolean(isInduced);
 
     // Depth determines fundamental frequency: shallow crust = 220-360Hz, deep mantle (700km) = 45-80Hz
     var depthRatio = Math.min(dep / 600, 1);
@@ -1463,12 +1537,21 @@ function getSeismicAudioProfile(magnitude, depth, hasTsunami) {
     var duration = Number((0.10 + Math.pow(normalizedMag / 9.5, 2.2) * 1.5).toFixed(2));
     var gain = Number((0.08 + Math.min(normalizedMag / 9.5, 1) * 0.36).toFixed(2));
 
+    // Human-induced detonations/blasts: sharper transient attack, higher-frequency crack, faster decay
+    if (induced) {
+        baseFreq = Math.round(baseFreq * 1.45); // higher fundamental pitch for surface blast
+        filterCutoff = Math.min(4800, Math.round(filterCutoff * 1.8)); // crisper acoustic crack
+        duration = Number((Math.min(duration, 0.45) * 0.75).toFixed(2)); // quick explosive decay
+    }
+
     return {
         frequency: baseFreq,
         subFrequency: Math.max(30, Math.round(baseFreq * 0.5)),
         filterCutoff: Math.max(120, filterCutoff),
         duration: duration,
         gain: gain,
+        isInduced: induced,
+        oscillatorType: induced ? "sawtooth" : "sine",
         hasTsunamiHarmonic: tsunami,
         tsunamiFrequency: 587.33 // D5 oceanic resonant chime
     };
@@ -1507,8 +1590,9 @@ function playSeismicTone(feature, options) {
         var mag = props.mag !== undefined ? props.mag : 3.0;
         var depth = props.depth !== undefined ? props.depth : 10;
         var tsunami = Boolean(props.hasTsunami);
+        var isInduced = Boolean(props.isInduced);
 
-        var profile = getSeismicAudioProfile(mag, depth, tsunami);
+        var profile = getSeismicAudioProfile(mag, depth, tsunami, isInduced);
         var now = seismicAudioCtx.currentTime;
         var isTimelapseMode = options && options.timelapse;
         var gainMultiplier = isTimelapseMode ? 0.55 : 1.0;
@@ -1527,9 +1611,9 @@ function playSeismicTone(feature, options) {
         masterGain.connect(filter);
         filter.connect(seismicAudioCtx.destination);
 
-        // Main seismic body wave (sine/triangle low frequency)
+        // Main seismic body wave (sine/sawtooth)
         var osc = seismicAudioCtx.createOscillator();
-        osc.type = "sine";
+        osc.type = profile.oscillatorType || "sine";
         osc.frequency.setValueAtTime(profile.frequency, now);
         osc.frequency.exponentialRampToValueAtTime(Math.max(28, profile.frequency * 0.72), now + effectiveDuration);
         osc.connect(masterGain);
@@ -1569,6 +1653,7 @@ function getFilteredFeatures(features, options) {
     var query = options && options.searchQuery !== undefined ? options.searchQuery : searchQuery;
     var timeMax = options && options.timelapseTimeMax !== undefined ? options.timelapseTimeMax : null;
     var tsunamiOnly = options && options.tsunamiOnly !== undefined ? options.tsunamiOnly : isTsunamiFilterActive;
+    var originFilter = options && options.originFilter !== undefined ? options.originFilter : activeOriginFilter;
 
     var list = Array.isArray(features) ? features : (currentGeojson.features || []);
     return list.filter(function (feature) {
@@ -1577,6 +1662,12 @@ function getFilteredFeatures(features, options) {
         }
         var props = feature.properties;
         if (tsunamiOnly && !props.hasTsunami) {
+            return false;
+        }
+        if (originFilter === "natural" && props.isInduced) {
+            return false;
+        }
+        if (originFilter === "induced" && !props.isInduced) {
             return false;
         }
         if (!depthSet.has(props.depthKey)) {
@@ -1593,6 +1684,22 @@ function getFilteredFeatures(features, options) {
         }
         return true;
     });
+}
+
+function setOriginFilter(origin) {
+    activeOriginFilter = (origin === "natural" || origin === "induced") ? origin : "all";
+    var chips = document.querySelectorAll(".origin-filter-chip");
+    chips.forEach(function (chip) {
+        var matches = (chip.getAttribute("data-origin") || "all") === activeOriginFilter;
+        chip.classList.toggle("is-active", matches);
+        chip.setAttribute("aria-pressed", String(matches));
+    });
+    refreshEarthquakeSource();
+    updateSummary(getVisibleGeojson());
+    if (!document.getElementById("feed-drawer").hidden) {
+        renderFeedDrawer();
+    }
+    return activeOriginFilter;
 }
 
 function getVisibleGeojson() {
@@ -4276,6 +4383,12 @@ function resetMapFilters() {
         chip.classList.toggle("is-active", isActive);
         chip.setAttribute("aria-pressed", String(isActive));
     });
+    activeOriginFilter = "all";
+    document.querySelectorAll(".origin-filter-chip").forEach(function (chip) {
+        var isActive = (chip.getAttribute("data-origin") || "all") === "all";
+        chip.classList.toggle("is-active", isActive);
+        chip.setAttribute("aria-pressed", String(isActive));
+    });
     var quakeInput = document.getElementById("quake-visibility");
     if (quakeInput) {
         quakeInput.checked = true;
@@ -4420,6 +4533,13 @@ function renderFeedDrawer() {
             pagerTag.className = "feed-drawer-pager-tag pager-" + quake.properties.pager.level;
             pagerTag.textContent = quake.properties.pager.level.toUpperCase();
             place.appendChild(pagerTag);
+        }
+
+        if (quake.properties.isInduced) {
+            var inducedTag = document.createElement("span");
+            inducedTag.className = "feed-drawer-tag feed-drawer-induced-tag";
+            inducedTag.textContent = (quake.properties.origin && quake.properties.origin.badgeLabel) || "⛏️ " + (quake.properties.eventTypeName || "Induced");
+            place.appendChild(inducedTag);
         }
 
         var meta = document.createElement("span");
@@ -5446,6 +5566,7 @@ function updateSummary(data) {
     var deepestEl = document.getElementById("deepest-depth");
     var latestEl = document.getElementById("latest-event");
     var energyEl = document.getElementById("total-energy");
+    var inducedEl = document.getElementById("induced-events-count");
     var announcementEl = document.getElementById("feed-announcement");
 
     if (!quakes.length) {
@@ -5455,6 +5576,7 @@ function updateSummary(data) {
         if (strongestEl) strongestEl.textContent = "—";
         if (deepestEl) deepestEl.textContent = "0 km";
         if (energyEl) energyEl.textContent = "0 J";
+        if (inducedEl) inducedEl.textContent = "0";
         if (latestEl) {
             latestEl.textContent = "--";
             latestEl.removeAttribute("title");
@@ -5483,6 +5605,10 @@ function updateSummary(data) {
     }, 0);
     var totalTntTons = totalJoules / 4.184e9;
 
+    var inducedCount = quakes.reduce(function (count, quake) {
+        return count + (quake && quake.properties && quake.properties.isInduced ? 1 : 0);
+    }, 0);
+
     highlightQuakes = { strongest: strongestQuake, deepest: deepestQuake, latest: latestQuake };
     quakes.forEach(function (quake) {
         quake.properties.isStrongest = quake === strongestQuake;
@@ -5499,6 +5625,9 @@ function updateSummary(data) {
     if (energyEl) {
         energyEl.textContent = formatEnergyString(totalJoules, totalTntTons);
         energyEl.title = totalJoules.toExponential(2) + " Joules (" + (totalTntTons >= 1e6 ? (totalTntTons / 1e6).toFixed(2) + " Megatons TNT" : totalTntTons.toFixed(1) + " tons TNT") + ")";
+    }
+    if (inducedEl) {
+        inducedEl.textContent = inducedCount.toLocaleString();
     }
     if (latestEl) {
         latestEl.textContent = formatRelativeTime(latestQuake.properties.time);
@@ -5731,6 +5860,8 @@ window.earthquakeApp.test = {
     renderFeedDrawer: renderFeedDrawer,
     formatPagerAlert: formatPagerAlert,
     formatMercalliIntensity: formatMercalliIntensity,
+    classifyEventOrigin: classifyEventOrigin,
+    setOriginFilter: setOriginFilter,
     exportActiveFeaturesToCsv: exportActiveFeaturesToCsv,
     exportActiveFeaturesToGeoJson: exportActiveFeaturesToGeoJson,
     startTimelapse: startTimelapse,
@@ -5864,6 +5995,14 @@ document.addEventListener("DOMContentLoaded", function () {
             refreshEarthquakeSource();
             renderFeedDrawer();
             updateSummary(getVisibleGeojson());
+        });
+    });
+
+    // Event Origin filter chips (All / Natural / Induced)
+    document.querySelectorAll(".origin-filter-chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+            var origin = chip.getAttribute("data-origin") || "all";
+            setOriginFilter(origin);
         });
     });
 

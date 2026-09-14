@@ -1006,6 +1006,7 @@
         var csv = helpers.exportActiveFeaturesToCsv(features);
         assert(csv.length > 0, "CSV export should not be empty");
         assert(csv.indexOf("id,timestamp_utc,place,magnitude,depth_km") === 0, "CSV contains correct header row");
+        assert(csv.indexOf("event_type,event_origin,is_induced") !== -1, "CSV contains origin and type columns");
         assert(csv.indexOf("us7000demo1") !== -1, "CSV contains first feature ID");
         assert(csv.indexOf("Near Tokyo, Japan") !== -1, "CSV contains Tokyo location");
         assert(csv.indexOf("yellow") !== -1, "CSV contains alert yellow");
@@ -1016,6 +1017,89 @@
         assertEqual(parsed.features.length, 2, "GeoJSON feature count matches");
         assertEqual(parsed.features[0].id, "us7000demo1", "GeoJSON feature ID preserved");
         assertEqual(parsed.metadata.count, 2, "GeoJSON metadata count matches");
+    });
+
+    test("classifies human-induced and natural earthquake event types accurately", function () {
+        var quarry = helpers.classifyEventOrigin("quarry blast");
+        assertEqual(quarry.isInduced, true, "quarry blast is human-induced");
+        assertEqual(quarry.eventOrigin, "induced", "quarry blast origin is induced");
+        assertEqual(quarry.category, "Quarry Blast", "quarry blast category name");
+        assert(quarry.icon === "⛏️", "quarry blast icon");
+
+        var mining = helpers.classifyEventOrigin("mining explosion");
+        assertEqual(mining.isInduced, true, "mining explosion is human-induced");
+        assertEqual(mining.category, "Mining Explosion", "mining explosion category");
+
+        var rockburst = helpers.classifyEventOrigin("rock burst");
+        assertEqual(rockburst.isInduced, true, "rock burst is human-induced");
+
+        var nuke = helpers.classifyEventOrigin("nuclear explosion");
+        assertEqual(nuke.isInduced, true, "nuclear explosion is human-induced");
+
+        var natural = helpers.classifyEventOrigin("earthquake");
+        assertEqual(natural.isInduced, false, "earthquake is natural");
+        assertEqual(natural.eventOrigin, "natural", "earthquake origin is natural");
+        assertEqual(natural.category, "Natural Earthquake", "natural category");
+
+        var fallback = helpers.classifyEventOrigin(null);
+        assertEqual(fallback.isInduced, false, "null falls back to natural");
+    });
+
+    test("normalizes earthquake features with origin, isInduced, and eventTypeName", function () {
+        var rawQuarry = {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [-117.1, 34.2, 1.5] },
+            properties: {
+                mag: 2.1,
+                place: "5km SSW of Quarry, California",
+                time: 1726000000000,
+                type: "quarry blast"
+            }
+        };
+
+        var normalized = helpers.normalizeEarthquakeFeature(rawQuarry);
+        assert(normalized !== null, "feature normalized");
+        assertEqual(normalized.properties.isInduced, true, "isInduced is true");
+        assertEqual(normalized.properties.eventOrigin, "induced", "eventOrigin is induced");
+        assertEqual(normalized.properties.eventTypeName, "Quarry Blast", "eventTypeName matches");
+        assert(normalized.properties.origin !== null, "origin object exists");
+
+        helpers.markRegionalChampions([normalized]);
+        assert(normalized.properties.searchIndex.indexOf("quarry") !== -1, "searchIndex includes quarry");
+        assert(normalized.properties.searchIndex.indexOf("induced") !== -1, "searchIndex includes induced");
+    });
+
+    test("filters features by event origin (all, natural, induced)", function () {
+        var features = [
+            { properties: { depthKey: "0-10", mag: 4.0, place: "Quarry Site", type: "quarry blast", isInduced: true, searchIndex: "quarry blast" } },
+            { properties: { depthKey: "0-10", mag: 5.0, place: "Fault Zone", type: "earthquake", isInduced: false, searchIndex: "earthquake" } },
+            { properties: { depthKey: "10-30", mag: 6.0, place: "Subduction Trench", type: "earthquake", isInduced: false, searchIndex: "earthquake" } }
+        ];
+
+        var depthSet = new Set(["0-10", "10-30"]);
+        var allFeatures = helpers.getFilteredFeatures(features, { activeDepthRanges: depthSet, originFilter: "all" });
+        assertEqual(allFeatures.length, 3, "all features count");
+
+        var naturalOnly = helpers.getFilteredFeatures(features, { activeDepthRanges: depthSet, originFilter: "natural" });
+        assertEqual(naturalOnly.length, 2, "natural features count");
+        assert(naturalOnly.every(function (f) { return !f.properties.isInduced; }), "only natural quakes retained");
+
+        var inducedOnly = helpers.getFilteredFeatures(features, { activeDepthRanges: depthSet, originFilter: "induced" });
+        assertEqual(inducedOnly.length, 1, "induced features count");
+        assertEqual(inducedOnly[0].properties.place, "Quarry Site", "correct induced feature retained");
+    });
+
+    test("produces explosive audio profile for human-induced events", function () {
+        var naturalProfile = helpers.getSeismicAudioProfile(3.0, 5, false, false);
+        var inducedProfile = helpers.getSeismicAudioProfile(3.0, 5, false, true);
+
+        assertEqual(naturalProfile.isInduced, false, "natural audio profile flag");
+        assertEqual(naturalProfile.oscillatorType, "sine", "natural uses sine wave");
+
+        assertEqual(inducedProfile.isInduced, true, "induced audio profile flag");
+        assertEqual(inducedProfile.oscillatorType, "sawtooth", "induced uses sawtooth transient wave");
+        assert(inducedProfile.frequency > naturalProfile.frequency, "induced fundamental pitch is higher for surface blast");
+        assert(inducedProfile.duration <= naturalProfile.duration, "induced duration is snappier");
     });
 
     var failed = results.filter(function (result) { return !result.passed; });

@@ -7,6 +7,8 @@ An interactive MapLibre GL globe that visualizes recent earthquake activity from
 - Quick time-range presets for 1 hour, 24 hours, 7 days, and 30 days, plus all intermediate ranges
 - Real-time location & country search with instant fly-to and match count
 - Minimum magnitude filters (`All`, `🌊 Tsunami`, `2.5+`, `4.5+`, `6.0+`, `7.0+`)
+- Dedicated **Event Origin Filters** (`All`, `🌍 Natural`, `⛏️ Induced`) distinguishing natural tectonic quakes from quarry blasts, mining explosions, rock bursts, and detonations
+- Human-induced event identification with amber alert badges, shallow focal depth warnings, and snappy explosive acoustic sonification
 - Dynamic **Tsunami Warning Alert Banner** with quick-filter toggle and one-click epicenter navigation
 - Real-time **Web Audio Seismic Sonification** synthesizing acoustic body/sub-bass rumble and tsunami harmonic tones on selection & timelapse
 - Toggleable **Cumulative Seismic Energy Heatmap Layer** weighted by empirical Gutenberg-Richter physical Joule release ($\log_{10} E = 4.8 + 1.5 M$)

@@ -16,6 +16,7 @@ Key additions include:
 3. **Citizen Science "Did You Feel It?" (DYFI)** felt report aggregation.
 4. **Significance Metric** index preservation (0–1000).
 5. **Data Export & Sharing** capabilities (CSV & GeoJSON).
+6. **Human-Induced vs. Natural Origin Classification** (quarry blasts, mining explosions, rock bursts, detonations) with dedicated filtering and badges.
 
 ---
 
@@ -25,6 +26,7 @@ The USGS GeoJSON payload includes properties under `feature.properties` that pro
 
 | Property | Type | Description | Web Implementation |
 | :--- | :--- | :--- | :--- |
+| `type` | `String` | Event type identifier (`"earthquake"`, `"quarry blast"`, `"mining explosion"`, `"rock burst"`, `"explosion"`). | Classified into `isInduced: Boolean` and `eventOrigin: "natural" | "induced"`. |
 | `alert` | `String?` | PAGER alert level (`"green"`, `"yellow"`, `"orange"`, `"red"`). | Normalized, validated, colored popup badge & feed tag. |
 | `felt` | `Int?` | Count of citizen Did You Feel It? (DYFI) responses. | Displayed in popup and feed cards with `👥 {n} felt`. |
 | `mmi` | `Double?` | Instrumental Modified Mercalli Intensity. | Formatted as Roman numeral I–X+ with human-readable shaking description. |

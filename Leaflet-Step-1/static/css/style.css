@@ -215,7 +215,7 @@ body {
 
 .stats-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -2038,6 +2038,56 @@ body {
   box-shadow: 0 2px 8px rgba(14, 165, 233, 0.35);
 }
 
+/* Origin Filter Group Base Styles */
+.origin-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.origin-filter-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #cbd5e1;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.origin-filter-chip {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(2, 6, 23, 0.5);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.origin-filter-chip:hover {
+  border-color: #f59e0b;
+  color: #fef3c7;
+}
+
+.origin-filter-chip.is-active {
+  background: #d97706;
+  border-color: #fbbf24;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+}
+
+.origin-filter-chip.induced-chip.is-active {
+  background: linear-gradient(135deg, #b45309, #d97706);
+  border-color: #fde68a;
+  color: #fffbeb;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.45);
+}
+
 .toolbar-actions {
   display: flex;
   align-items: center;
@@ -3342,3 +3392,44 @@ body {
   color: #cbd5e1;
   margin-left: 4px;
 }
+
+/* ==========================================================================
+   Human-Induced Origin Badges & Tags
+   ========================================================================== */
+.origin-popup-badge {
+  margin: 6px 0 8px 0;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.02em;
+}
+
+.origin-popup-badge.origin-induced {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.9), rgba(217, 119, 6, 0.85));
+  border: 1px solid rgba(251, 191, 36, 0.65);
+  color: #fffbeb;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+}
+
+.feed-drawer-tag.feed-drawer-induced-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(217, 119, 6, 0.25);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: #fef08a;
+  margin-left: 4px;
+}
+
+.stat-card.stat-card--induced strong {
+  color: #fcd34d;
+}
+
