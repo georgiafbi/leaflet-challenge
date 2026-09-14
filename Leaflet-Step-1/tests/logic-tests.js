@@ -898,6 +898,126 @@
         assertEqual(button.getAttribute("aria-expanded"), "false", "guide button aria-expanded false");
     });
 
+    test("normalizes and formats PAGER emergency alert levels", function () {
+        var green = helpers.formatPagerAlert("green");
+        assertEqual(green.level, "green", "green level");
+        assertEqual(green.label, "PAGER: GREEN", "green label");
+        assertEqual(green.description, "Low risk of fatalities and economic losses", "green description");
+
+        var yellow = helpers.formatPagerAlert("YELLOW");
+        assertEqual(yellow.level, "yellow", "yellow case insensitive");
+        assertEqual(yellow.label, "PAGER: YELLOW", "yellow label");
+
+        var orange = helpers.formatPagerAlert("orange");
+        assertEqual(orange.level, "orange", "orange level");
+
+        var red = helpers.formatPagerAlert(" red ");
+        assertEqual(red.level, "red", "red trimmed");
+
+        assertEqual(helpers.formatPagerAlert("blue"), null, "unknown alert returns null");
+        assertEqual(helpers.formatPagerAlert(null), null, "null alert returns null");
+    });
+
+    test("formats Mercalli intensity with Roman numerals and shaking descriptions", function () {
+        assertEqual(helpers.formatMercalliIntensity(0.5), null, "sub-threshold MMI returns null");
+        assertEqual(helpers.formatMercalliIntensity(null), null, "null MMI returns null");
+
+        var weak = helpers.formatMercalliIntensity(2.4);
+        assertEqual(weak.roman, "II", "MMI 2.4 Roman numeral");
+        assert(weak.shaking.indexOf("Weak") !== -1, "MMI 2.4 shaking description");
+
+        var moderate = helpers.formatMercalliIntensity(5.2);
+        assertEqual(moderate.roman, "V", "MMI 5.2 Roman numeral");
+        assertEqual(moderate.label, "MMI V (Moderate (Felt by all, slight damage))", "MMI 5.2 formatted label");
+
+        var violent = helpers.formatMercalliIntensity(9.1);
+        assertEqual(violent.roman, "IX", "MMI 9.1 Roman numeral");
+
+        var extreme = helpers.formatMercalliIntensity(10.5);
+        assertEqual(extreme.roman, "X+", "MMI 10.5+ Roman numeral");
+        assert(extreme.shaking.indexOf("Extreme") !== -1, "MMI 10.5+ shaking description");
+    });
+
+    test("normalizes earthquake features with alert, felt, intensity, and sig properties", function () {
+        var rawFeature = {
+            type: "Feature",
+            id: "us7000test",
+            geometry: {
+                type: "Point",
+                coordinates: [-122.4194, 37.7749, 8.5]
+            },
+            properties: {
+                mag: 6.8,
+                place: "San Francisco, California",
+                time: 1726000000000,
+                alert: "orange",
+                felt: 1420,
+                mmi: 6.7,
+                sig: 750
+            }
+        };
+
+        var normalized = helpers.normalizeEarthquakeFeature(rawFeature);
+        assert(normalized !== null, "feature should be normalized");
+        assertEqual(normalized.properties.alert, "orange", "alert level normalized");
+        assert(normalized.properties.pager !== null, "pager object populated");
+        assertEqual(normalized.properties.pager.level, "orange", "pager level matches");
+        assertEqual(normalized.properties.felt, 1420, "felt report count preserved");
+        assertEqual(normalized.properties.mmi, 6.7, "mmi preserved");
+        assert(normalized.properties.intensity !== null, "intensity object populated");
+        assertEqual(normalized.properties.intensity.roman, "VII", "intensity roman VII");
+        assertEqual(normalized.properties.sig, 750, "significance preserved");
+    });
+
+    test("exports active earthquake features to valid CSV and GeoJSON datasets", function () {
+        var features = [
+            {
+                id: "us7000demo1",
+                geometry: { coordinates: [139.6917, 35.6895, 15.2] },
+                properties: {
+                    place: "Near Tokyo, Japan",
+                    mag: 6.1,
+                    time: 1726000000000,
+                    alert: "yellow",
+                    felt: 85,
+                    mmi: 5.4,
+                    hasTsunami: true,
+                    energyJoules: 1.2e14,
+                    url: "https://earthquake.usgs.gov/earthquakes/eventpage/us7000demo1"
+                }
+            },
+            {
+                id: "us7000demo2",
+                geometry: { coordinates: [-118.2437, 34.0522, 9.1] },
+                properties: {
+                    place: "Los Angeles, CA",
+                    mag: 4.2,
+                    time: 1726001000000,
+                    alert: "green",
+                    felt: 340,
+                    mmi: 4.1,
+                    hasTsunami: false,
+                    energyJoules: 8.5e10,
+                    url: "https://earthquake.usgs.gov/earthquakes/eventpage/us7000demo2"
+                }
+            }
+        ];
+
+        var csv = helpers.exportActiveFeaturesToCsv(features);
+        assert(csv.length > 0, "CSV export should not be empty");
+        assert(csv.indexOf("id,timestamp_utc,place,magnitude,depth_km") === 0, "CSV contains correct header row");
+        assert(csv.indexOf("us7000demo1") !== -1, "CSV contains first feature ID");
+        assert(csv.indexOf("Near Tokyo, Japan") !== -1, "CSV contains Tokyo location");
+        assert(csv.indexOf("yellow") !== -1, "CSV contains alert yellow");
+
+        var geojsonStr = helpers.exportActiveFeaturesToGeoJson(features);
+        var parsed = JSON.parse(geojsonStr);
+        assertEqual(parsed.type, "FeatureCollection", "GeoJSON type is FeatureCollection");
+        assertEqual(parsed.features.length, 2, "GeoJSON feature count matches");
+        assertEqual(parsed.features[0].id, "us7000demo1", "GeoJSON feature ID preserved");
+        assertEqual(parsed.metadata.count, 2, "GeoJSON metadata count matches");
+    });
+
     var failed = results.filter(function (result) { return !result.passed; });
     var list = document.getElementById("results");
     results.forEach(function (result) {

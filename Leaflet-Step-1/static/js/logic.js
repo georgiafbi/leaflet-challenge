@@ -546,6 +546,118 @@ function calculateSeismicEnergy(mag) {
     };
 }
 
+function formatPagerAlert(alert) {
+    if (!alert || typeof alert !== "string") {
+        return null;
+    }
+    var key = alert.trim().toLowerCase();
+    switch (key) {
+        case "green":
+            return { level: "green", label: "PAGER: GREEN", description: "Low risk of fatalities and economic losses" };
+        case "yellow":
+            return { level: "yellow", label: "PAGER: YELLOW", description: "Local casualties or economic damage possible" };
+        case "orange":
+            return { level: "orange", label: "PAGER: ORANGE", description: "Significant casualties and damage likely" };
+        case "red":
+            return { level: "red", label: "PAGER: RED", description: "Extensive casualties and widespread disaster" };
+        default:
+            return null;
+    }
+}
+
+function formatMercalliIntensity(mmi) {
+    if (!Number.isFinite(mmi) || mmi < 1.0) {
+        return null;
+    }
+    var val = Math.round(mmi);
+    var roman = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X+"][Math.min(10, Math.max(1, val))];
+    var desc = "";
+    if (mmi < 2.0) desc = "Micro (Felt by few)";
+    else if (mmi < 3.0) desc = "Weak (Felt indoors)";
+    else if (mmi < 4.0) desc = "Noticeable (Like passing heavy truck)";
+    else if (mmi < 5.0) desc = "Light (Dishes rattle, cars rock)";
+    else if (mmi < 6.0) desc = "Moderate (Felt by all, slight damage)";
+    else if (mmi < 7.0) desc = "Strong (Furniture moved, plaster cracks)";
+    else if (mmi < 8.0) desc = "Very Strong (Considerable masonry damage)";
+    else if (mmi < 9.0) desc = "Severe (Major structural damage, walls collapse)";
+    else if (mmi < 10.0) desc = "Violent (Buildings collapsed, ground cracks)";
+    else desc = "Extreme (Total destruction)";
+
+    return {
+        value: Number(mmi.toFixed(1)),
+        roman: roman,
+        shaking: desc,
+        label: "MMI " + roman + " (" + desc + ")"
+    };
+}
+
+function exportActiveFeaturesToCsv(features) {
+    if (!Array.isArray(features)) {
+        return "";
+    }
+    var headers = [
+        "id", "timestamp_utc", "place", "magnitude", "depth_km",
+        "latitude", "longitude", "alert_level", "felt_reports",
+        "mmi_intensity", "tsunami_warning", "energy_joules", "usgs_url"
+    ];
+    var rows = [headers.join(",")];
+
+    features.forEach(function (f) {
+        if (!f || !f.properties || !f.geometry) return;
+        var p = f.properties;
+        var coords = f.geometry.coordinates || [0, 0, 0];
+        var timeStr = p.time ? new Date(p.time).toISOString() : "";
+        var placeEsc = (p.place || "").replace(/"/g, '""');
+
+        var row = [
+            '"' + (f.id || p.eventId || "") + '"',
+            '"' + timeStr + '"',
+            '"' + placeEsc + '"',
+            p.mag !== null && p.mag !== undefined ? p.mag : "",
+            p.depth || (coords[2] !== undefined ? coords[2] : ""),
+            coords[1] !== undefined ? coords[1] : "",
+            coords[0] !== undefined ? coords[0] : "",
+            p.alert || "",
+            p.felt || 0,
+            p.mmi || "",
+            p.hasTsunami ? 1 : 0,
+            p.energyJoules || "",
+            '"' + (p.url || "") + '"'
+        ];
+        rows.push(row.join(","));
+    });
+
+    return rows.join("\n");
+}
+
+function exportActiveFeaturesToGeoJson(features) {
+    var collection = {
+        type: "FeatureCollection",
+        metadata: {
+            generated: Date.now(),
+            count: Array.isArray(features) ? features.length : 0,
+            title: "Earthquake Monitor Filtered Export"
+        },
+        features: Array.isArray(features) ? features : []
+    };
+    return JSON.stringify(collection, null, 2);
+}
+
+function downloadExportFile(filename, content, mimeType) {
+    if (typeof window === "undefined" || !window.Blob) return;
+    var blob = new Blob([content], { type: mimeType || "text/plain" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
 function normalizeEarthquakeFeature(feature) {
     if (!feature || feature.type !== "Feature" || !feature.geometry || feature.geometry.type !== "Point" ||
             !Array.isArray(feature.geometry.coordinates) || !feature.properties ||
@@ -592,6 +704,19 @@ function normalizeEarthquakeFeature(feature) {
         properties.countryCode = location.countryCode;
     }
     properties.locationAliases = location.aliases;
+
+    // PAGER Emergency Alert level (green, yellow, orange, red)
+    properties.alert = (typeof properties.alert === "string" && properties.alert.trim()) ? properties.alert.trim().toLowerCase() : null;
+    properties.pager = formatPagerAlert(properties.alert);
+
+    // Citizen Science "Did You Feel It?" (DYFI) reports & Modified Mercalli Intensity
+    properties.felt = Number.isInteger(properties.felt) && properties.felt > 0 ? properties.felt : (Number(properties.felt) > 0 ? Math.round(Number(properties.felt)) : 0);
+    var rawMmi = Number(properties.mmi || properties.cdi);
+    properties.mmi = Number.isFinite(rawMmi) && rawMmi > 0 ? Number(rawMmi.toFixed(1)) : null;
+    properties.intensity = formatMercalliIntensity(properties.mmi);
+
+    // Significance (0 - 1000)
+    properties.sig = Number.isFinite(Number(properties.sig)) ? Math.max(0, Math.round(Number(properties.sig))) : 0;
 
     var normalized = Object.assign({}, feature, {
         geometry: Object.assign({}, feature.geometry, {
@@ -856,8 +981,24 @@ function buildPopupContent(props) {
         content.appendChild(tsunamiBadge);
     }
 
+    if (props.pager) {
+        var pagerBadge = document.createElement("p");
+        pagerBadge.className = "pager-popup-badge pager-" + props.pager.level;
+        pagerBadge.textContent = "🚨 " + props.pager.label + " (" + props.pager.description + ")";
+        content.appendChild(pagerBadge);
+    }
+
     appendPopupRow(content, "Magnitude", formatMagnitudeLabel(props.mag));
     appendPopupRow(content, "Depth", props.depth + " km");
+    if (props.felt > 0) {
+        appendPopupRow(content, "Felt reports", props.felt.toLocaleString() + " citizen report(s)", true);
+    }
+    if (props.intensity && props.intensity.label) {
+        appendPopupRow(content, "Shaking intensity", props.intensity.label, true);
+    }
+    if (props.sig > 0) {
+        appendPopupRow(content, "Significance", props.sig + " / 1000", true);
+    }
     if (props.energyLabel) {
         appendPopupRow(content, "Seismic energy", props.energyLabel, true);
     }
@@ -4274,9 +4415,20 @@ function renderFeedDrawer() {
             place.appendChild(tTag);
         }
 
+        if (quake.properties.pager) {
+            var pagerTag = document.createElement("span");
+            pagerTag.className = "feed-drawer-pager-tag pager-" + quake.properties.pager.level;
+            pagerTag.textContent = quake.properties.pager.level.toUpperCase();
+            place.appendChild(pagerTag);
+        }
+
         var meta = document.createElement("span");
         meta.className = "feed-drawer-meta";
-        meta.textContent = formatRelativeTime(quake.properties.time) + " · " + quake.properties.depth + " km";
+        var metaParts = [formatRelativeTime(quake.properties.time), quake.properties.depth + " km"];
+        if (quake.properties.felt > 0) {
+            metaParts.push(quake.properties.felt.toLocaleString() + " felt");
+        }
+        meta.textContent = metaParts.join(" · ");
 
         info.appendChild(place);
         info.appendChild(meta);
@@ -5577,6 +5729,10 @@ window.earthquakeApp.test = {
     airshipWaypoints: airshipWaypoints,
     toggleFeedDrawer: toggleFeedDrawer,
     renderFeedDrawer: renderFeedDrawer,
+    formatPagerAlert: formatPagerAlert,
+    formatMercalliIntensity: formatMercalliIntensity,
+    exportActiveFeaturesToCsv: exportActiveFeaturesToCsv,
+    exportActiveFeaturesToGeoJson: exportActiveFeaturesToGeoJson,
     startTimelapse: startTimelapse,
     pauseTimelapse: pauseTimelapse,
     stopTimelapse: stopTimelapse,
@@ -5748,6 +5904,24 @@ document.addEventListener("DOMContentLoaded", function () {
     if (closeFeedBtn) {
         closeFeedBtn.addEventListener("click", function () {
             toggleFeedDrawer(false);
+        });
+    }
+
+    var exportCsvBtn = document.getElementById("export-csv-btn");
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener("click", function () {
+            var features = getVisibleGeojson().features;
+            var csv = exportActiveFeaturesToCsv(features);
+            downloadExportFile("earthquakes_" + currentRange + ".csv", csv, "text/csv");
+        });
+    }
+
+    var exportJsonBtn = document.getElementById("export-geojson-btn");
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener("click", function () {
+            var features = getVisibleGeojson().features;
+            var json = exportActiveFeaturesToGeoJson(features);
+            downloadExportFile("earthquakes_" + currentRange + ".geojson", json, "application/geo+json");
         });
     }
 
