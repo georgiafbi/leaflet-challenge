@@ -160,7 +160,10 @@ function getDepthRangeKey(depth) {
     return "90+";
 }
 
-function getMagnitudeShapeKey(magnitude) {
+function getMagnitudeShapeKey(magnitude, isInduced) {
+    if (isInduced === true || (isInduced && isInduced.isInduced)) {
+        return "cube";
+    }
     return "sphere";
 }
 
@@ -547,10 +550,12 @@ function calculateSeismicEnergy(mag) {
     };
 }
 
-function classifyEventOrigin(type) {
-    var rawType = (typeof type === "string") ? type.trim().toLowerCase() : "earthquake";
+function classifyEventOrigin(type, place) {
+    var rawType = (typeof type === "string") ? type.trim().toLowerCase().replace(/_/g, " ") : "earthquake";
+    var rawPlace = (typeof place === "string") ? place.trim().toLowerCase() : "";
     var humanInducedTypes = {
         "quarry blast": { category: "Quarry Blast", icon: "⛏️", description: "Surface industrial blasting at aggregate quarry" },
+        "quarry": { category: "Quarry Blast", icon: "⛏️", description: "Surface industrial blasting at aggregate quarry" },
         "mining explosion": { category: "Mining Explosion", icon: "⛏️", description: "Subsurface explosion associated with mining operations" },
         "rock burst": { category: "Rock Burst", icon: "💥", description: "Spontaneous violent rock failure in deep mine" },
         "rockburst": { category: "Rock Burst", icon: "💥", description: "Spontaneous violent rock failure in deep mine" },
@@ -559,7 +564,10 @@ function classifyEventOrigin(type) {
         "nuclear explosion": { category: "Nuclear Explosion", icon: "☢️", description: "Nuclear test or detonation" },
         "experimental explosion": { category: "Experimental Explosion", icon: "💥", description: "Controlled experimental seismic explosion" },
         "collapse": { category: "Cavity Collapse", icon: "🏚️", description: "Mine or structural cavity collapse" },
-        "mine collapse": { category: "Mine Collapse", icon: "🏚️", description: "Mine roof or shaft collapse" }
+        "mine collapse": { category: "Mine Collapse", icon: "🏚️", description: "Mine roof or shaft collapse" },
+        "sonic boom": { category: "Sonic Boom", icon: "✈️", description: "Atmospheric supersonic shockwave" },
+        "induced": { category: "Induced Event", icon: "⛏️", description: "Human-induced seismic event" },
+        "accidental explosion": { category: "Explosion", icon: "💥", description: "Accidental surface explosion" }
     };
 
     if (humanInducedTypes[rawType]) {
@@ -576,10 +584,37 @@ function classifyEventOrigin(type) {
         };
     }
 
+    if (rawPlace) {
+        if (rawPlace.indexOf("quarry blast") !== -1 || rawPlace.indexOf(" quarry") !== -1 || rawPlace.indexOf("quarry ") !== -1) {
+            return {
+                isInduced: true,
+                eventOrigin: "induced",
+                type: "quarry blast",
+                category: "Quarry Blast",
+                icon: "⛏️",
+                label: "Human-Induced: Quarry Blast",
+                badgeLabel: "⛏️ Quarry Blast",
+                fullDescription: "Surface industrial blasting at aggregate quarry"
+            };
+        }
+        if (rawPlace.indexOf("mining explosion") !== -1 || rawPlace.indexOf("mine explosion") !== -1) {
+            return {
+                isInduced: true,
+                eventOrigin: "induced",
+                type: "mining explosion",
+                category: "Mining Explosion",
+                icon: "⛏️",
+                label: "Human-Induced: Mining Explosion",
+                badgeLabel: "⛏️ Mining Explosion",
+                fullDescription: "Subsurface explosion associated with mining operations"
+            };
+        }
+    }
+
     var naturalCategory = "Natural Earthquake";
     if (rawType === "volcanic eruption" || rawType === "volcanic tremor") {
         naturalCategory = "Volcanic Activity";
-    } else if (rawType === "ice quake") {
+    } else if (rawType === "ice quake" || rawType === "icequake") {
         naturalCategory = "Ice Quake (Cryoseism)";
     }
 
@@ -739,7 +774,15 @@ function normalizeEarthquakeFeature(feature) {
     properties.time = timestamp;
     properties.depth = depth.toFixed(1);
     properties.depthKey = getDepthRangeKey(depth);
-    properties.shapeKey = getMagnitudeShapeKey(properties.mag);
+
+    // Event Origin & Type (Natural Tectonic vs Human-Induced / Anthropogenic)
+    var originInfo = classifyEventOrigin(properties.type, properties.place);
+    properties.isInduced = originInfo.isInduced;
+    properties.eventOrigin = originInfo.eventOrigin;
+    properties.eventTypeName = originInfo.category;
+    properties.origin = originInfo;
+
+    properties.shapeKey = getMagnitudeShapeKey(properties.mag, properties.isInduced);
     properties.magnitudeLabel = formatMagnitudeLabel(properties.mag);
     properties.hasTsunami = hasTsunamiWarning(feature);
 
@@ -770,13 +813,6 @@ function normalizeEarthquakeFeature(feature) {
 
     // Significance (0 - 1000)
     properties.sig = Number.isFinite(Number(properties.sig)) ? Math.max(0, Math.round(Number(properties.sig))) : 0;
-
-    // Event Origin & Type (Natural Tectonic vs Human-Induced / Anthropogenic)
-    var originInfo = classifyEventOrigin(properties.type);
-    properties.isInduced = originInfo.isInduced;
-    properties.eventOrigin = originInfo.eventOrigin;
-    properties.eventTypeName = originInfo.category;
-    properties.origin = originInfo;
 
     var normalized = Object.assign({}, feature, {
         geometry: Object.assign({}, feature.geometry, {
@@ -2083,11 +2119,13 @@ function createCubeImage(color) {
     canvas.height = height;
     var ctx = canvas.getContext("2d");
 
+    // Contact drop shadow
     ctx.beginPath();
     ctx.ellipse(36, 62, 25, 3.5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(2, 6, 23, 0.34)";
+    ctx.fillStyle = "rgba(2, 6, 23, 0.38)";
     ctx.fill();
 
+    // Top face
     ctx.beginPath();
     ctx.moveTo(36, 5);
     ctx.lineTo(64, 20);
@@ -2095,12 +2133,13 @@ function createCubeImage(color) {
     ctx.lineTo(8, 20);
     ctx.closePath();
     var topFace = ctx.createLinearGradient(13, 10, 58, 31);
-    topFace.addColorStop(0, hexChannelMix(color, 255, 0.8));
-    topFace.addColorStop(0.55, hexChannelMix(color, 255, 0.3));
+    topFace.addColorStop(0, hexChannelMix(color, 255, 0.85));
+    topFace.addColorStop(0.55, hexChannelMix(color, 255, 0.35));
     topFace.addColorStop(1, color);
     ctx.fillStyle = topFace;
     ctx.fill();
 
+    // Left face
     ctx.beginPath();
     ctx.moveTo(8, 20);
     ctx.lineTo(36, 36);
@@ -2109,10 +2148,11 @@ function createCubeImage(color) {
     ctx.closePath();
     var leftFace = ctx.createLinearGradient(8, 22, 37, 57);
     leftFace.addColorStop(0, hexChannelMix(color, 255, 0.22));
-    leftFace.addColorStop(1, hexChannelMix(color, 0, 0.28));
+    leftFace.addColorStop(1, hexChannelMix(color, 0, 0.32));
     ctx.fillStyle = leftFace;
     ctx.fill();
 
+    // Right face
     ctx.beginPath();
     ctx.moveTo(64, 20);
     ctx.lineTo(64, 47);
@@ -2121,10 +2161,24 @@ function createCubeImage(color) {
     ctx.closePath();
     var rightFace = ctx.createLinearGradient(37, 31, 63, 55);
     rightFace.addColorStop(0, color);
-    rightFace.addColorStop(1, hexChannelMix(color, 0, 0.56));
+    rightFace.addColorStop(1, hexChannelMix(color, 0, 0.58));
     ctx.fillStyle = rightFace;
     ctx.fill();
 
+    // Inner diamond prism motif on top face indicating industrial / induced origin
+    ctx.beginPath();
+    ctx.moveTo(36, 12);
+    ctx.lineTo(47, 20);
+    ctx.lineTo(36, 28);
+    ctx.lineTo(25, 20);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.38)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // High-visibility hazard amber perimeter rim
     ctx.beginPath();
     ctx.moveTo(36, 5);
     ctx.lineTo(64, 20);
@@ -2133,19 +2187,20 @@ function createCubeImage(color) {
     ctx.lineTo(8, 47);
     ctx.lineTo(8, 20);
     ctx.closePath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.92)";
+    ctx.lineWidth = 1.8;
     ctx.lineJoin = "round";
     ctx.stroke();
 
+    // Internal facet seam lines
     ctx.beginPath();
     ctx.moveTo(8, 20);
     ctx.lineTo(36, 36);
     ctx.lineTo(64, 20);
     ctx.moveTo(36, 36);
     ctx.lineTo(36, 62);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.34)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
 
     return ctx.getImageData(0, 0, width, height);
@@ -4509,7 +4564,7 @@ function renderFeedDrawer() {
         item.setAttribute("aria-label", (quake.properties.place || "Earthquake") + ", Magnitude " + formatMagnitudeLabel(quake.properties.mag));
 
         var magBadge = document.createElement("span");
-        magBadge.className = "feed-drawer-mag";
+        magBadge.className = "feed-drawer-mag" + (quake.properties.isInduced ? " feed-drawer-mag-induced" : "");
         var depthRange = depthRangeDefinitions.find(function (r) { return r.key === quake.properties.depthKey; }) || depthRangeDefinitions[0];
         magBadge.style.backgroundColor = depthRange.color;
         magBadge.textContent = formatMagnitudeLabel(quake.properties.mag);
@@ -4850,6 +4905,12 @@ function buildMapPanels() {
     magnitudeLegend.innerHTML = '<span class="magnitude-shape is-sphere" aria-hidden="true"></span><span class="legend-badge-text">Mag Size</span>';
     extraNotes.appendChild(magnitudeLegend);
 
+    var inducedLegend = document.createElement("div");
+    inducedLegend.className = "legend-note legend-induced-note";
+    inducedLegend.title = "Faceted 3D cube marker identifies human-induced / anthropogenic seismic events (quarry blasts, mining explosions).";
+    inducedLegend.innerHTML = '<span class="magnitude-shape is-cube" aria-hidden="true"></span><span class="legend-badge-text">Induced</span>';
+    extraNotes.appendChild(inducedLegend);
+
     var platesNote = document.createElement("div");
     platesNote.className = "legend-note";
     platesNote.title = "Tectonic plate boundaries from the Peter Bird (PB2002) global model.";
@@ -5093,6 +5154,7 @@ function createMap() {
 
         depthRangeDefinitions.forEach(function (range) {
             globeMap.addImage("sphere-" + range.key, createSphereImage(range.color), { pixelRatio: 2 });
+            globeMap.addImage("cube-" + range.key, createCubeImage(range.color), { pixelRatio: 2 });
             globeMap.addImage("epicenter-" + range.key, createEpicenterImage(range.color), { pixelRatio: 2 });
         });
         globeMap.addImage("selection-ring", createSelectionRingImage(), { pixelRatio: 2 });
@@ -5807,6 +5869,7 @@ window.earthquakeApp.test = {
     getDepthRangeKey: getDepthRangeKey,
     getDepthColorExpression: getDepthColorExpression,
     getMagnitudeShapeKey: getMagnitudeShapeKey,
+    createCubeImage: createCubeImage,
     getNumericMagnitude: getNumericMagnitude,
     getOffshoreArea: getOffshoreArea,
     getQuakeIdentity: getQuakeIdentity,

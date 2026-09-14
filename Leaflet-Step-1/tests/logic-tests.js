@@ -49,6 +49,21 @@
         assertEqual(helpers.getMagnitudeShapeKey("invalid"), "sphere", "invalid magnitude fallback");
     });
 
+    test("uses cubes for human-induced earthquakes across magnitudes", function () {
+        assertEqual(helpers.getMagnitudeShapeKey(2.5, true), "cube", "small induced quake uses cube marker");
+        assertEqual(helpers.getMagnitudeShapeKey(4.0, { isInduced: true }), "cube", "object with isInduced uses cube marker");
+        assertEqual(helpers.getMagnitudeShapeKey(6.0, false), "sphere", "explicit false returns sphere marker");
+    });
+
+    test("creates centered faceted cube artwork for induced earthquakes", function () {
+        var cube = helpers.createCubeImage("#f59e0b");
+        assertEqual(cube.width, 72, "cube canvas width");
+        assertEqual(cube.height, 66, "cube canvas height");
+        assert(cube.data.length === 72 * 66 * 4, "cube raw pixel buffer size");
+        var centerAlpha = cube.data[((36 * cube.width + 36) * 4) + 3];
+        assert(centerAlpha > 0, "cube center is painted");
+    });
+
     test("creates centered ringed epicenter artwork for champions", function () {
         var image = helpers.createEpicenterImage("#4dabf7");
         var selection = helpers.createChampionSelectionRingImage();
@@ -1043,6 +1058,10 @@
 
         var fallback = helpers.classifyEventOrigin(null);
         assertEqual(fallback.isInduced, false, "null falls back to natural");
+
+        var placeDetected = helpers.classifyEventOrigin("earthquake", "4km W of Granite Quarry, CA");
+        assertEqual(placeDetected.isInduced, true, "place containing quarry is detected as induced");
+        assertEqual(placeDetected.category, "Quarry Blast", "place quarry detected as Quarry Blast");
     });
 
     test("normalizes earthquake features with origin, isInduced, and eventTypeName", function () {
@@ -1062,7 +1081,22 @@
         assertEqual(normalized.properties.isInduced, true, "isInduced is true");
         assertEqual(normalized.properties.eventOrigin, "induced", "eventOrigin is induced");
         assertEqual(normalized.properties.eventTypeName, "Quarry Blast", "eventTypeName matches");
+        assertEqual(normalized.properties.shapeKey, "cube", "shapeKey for induced event is cube");
         assert(normalized.properties.origin !== null, "origin object exists");
+
+        var rawNatural = {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [-118.2, 34.1, 10.0] },
+            properties: {
+                mag: 3.5,
+                place: "Los Angeles, CA",
+                time: 1726000000000,
+                type: "earthquake"
+            }
+        };
+        var normalizedNatural = helpers.normalizeEarthquakeFeature(rawNatural);
+        assertEqual(normalizedNatural.properties.isInduced, false, "natural event isInduced is false");
+        assertEqual(normalizedNatural.properties.shapeKey, "sphere", "shapeKey for natural event is sphere");
 
         helpers.markRegionalChampions([normalized]);
         assert(normalized.properties.searchIndex.indexOf("quarry") !== -1, "searchIndex includes quarry");
